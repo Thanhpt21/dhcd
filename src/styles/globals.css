@@ -1,0 +1,50 @@
+@import "tailwindcss"; 
+@config "../../tailwind.config.js";
+@import 'antd/dist/antd.css';
+
+
+/* Thêm vào file CSS global */
+.custom-avatar-select .ant-select-selector {
+    height: 95px !important;
+    min-height: 95px !important;
+    padding: 8px 11px !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.custom-avatar-select .ant-select-selection-item {
+    display: flex !important;
+    align-items: center !important;
+    height: 100% !important;
+    padding: 8px 0 !important;
+}
+
+/* Đảm bảo avatar image hiển thị đầy đủ */
+.custom-avatar-select .ant-select-selection-item img {
+    width: 60px !important;
+    height: 60px !important;
+    object-fit: cover !important;
+    border-radius: 50% !important;
+}
+
+/* Thêm vào file CSS global */
+.custom-voice-select .ant-select-selector {
+    height: 95px !important;
+    min-height: 95px !important;
+    padding: 8px 11px !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.custom-voice-select .ant-select-selection-item {
+    display: flex !important;
+    align-items: center !important;
+    height: 100% !important;
+    padding: 8px 0 !important;
+}
+
+/* Đảm bảo voice icon hiển thị đầy đủ */
+.custom-voice-select .ant-select-selection-item .anticon {
+    font-size: 24px !important;
+    margin-right: 12px !important;
+}

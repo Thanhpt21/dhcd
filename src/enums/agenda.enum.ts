@@ -1,0 +1,7 @@
+export enum AgendaStatus {
+  PENDING = 'PENDING',
+  ONGOING = 'ONGOING', 
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+  DELAYED = 'DELAYED'
+}

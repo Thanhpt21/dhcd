@@ -1,0 +1,5 @@
+export { default as SelectedQuestionsTab } from './SelectedQuestionsTab'
+export { default as AgendasTab } from './AgendasTab'
+export { default as DocumentsTab } from './DocumentsTab'
+export { default as ResolutionsTab } from './ResolutionsTab'
+export { default as ParticipantsTab } from './ParticipantsTab'

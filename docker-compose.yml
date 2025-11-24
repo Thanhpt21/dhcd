@@ -1,0 +1,12 @@
+services:
+  frontend:
+    build: .
+    container_name: dhcd-frontend
+    ports:
+      - "5002:5002"  
+    env_file:
+      - .env.prod
+    environment:
+      - NODE_ENV=production
+      - PORT=5002  
+    restart: unless-stopped
