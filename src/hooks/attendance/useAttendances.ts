@@ -16,5 +16,7 @@ export const useAttendances = (params?: {
       const res = await api.get('/attendances', { params })
       return res.data.data
     },
+    refetchInterval: 3000, 
+    refetchIntervalInBackground: true, 
   })
 }

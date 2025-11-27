@@ -44,7 +44,6 @@ export default function ResolutionManagement({ meetingId }: ResolutionManagement
         <Space>
           <FileTextOutlined />
           <span>Danh sách Nghị quyết</span>
-          <span className="text-gray-500">({resolutions?.length || 0})</span>
         </Space>
       ),
       children: (

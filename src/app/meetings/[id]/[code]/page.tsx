@@ -435,6 +435,7 @@ export default function MeetingDetailWithVerificationPage() {
                       attendanceVerified={attendanceVerified}
                       verificationResponse={verificationResponse}
                       onVoteClick={handleVoteClick}
+                      meetingData={meeting}
                     />
                   )
                 },

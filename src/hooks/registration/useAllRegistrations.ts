@@ -11,5 +11,7 @@ export const useAllRegistrations = (search?: string, status?: string, meetingId?
       })
       return res.data.data
     },
+     refetchInterval: 3000, 
+    refetchIntervalInBackground: true, 
   })
 }

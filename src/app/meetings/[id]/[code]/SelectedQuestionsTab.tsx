@@ -55,7 +55,6 @@ export default function SelectedQuestionsTab({
   const [questionDropdownOpen, setQuestionDropdownOpen] = useState(false)
   const [questionDrawerOpen, setQuestionDrawerOpen] = useState(false)
   const [questionText, setQuestionText] = useState('')
-  const [upvotingQuestions, setUpvotingQuestions] = useState<Set<number>>(new Set())
 
   // Hook for all meeting questions
   const { 
@@ -63,7 +62,7 @@ export default function SelectedQuestionsTab({
     isLoading: meetingQuestionsLoading 
   } = useMeetingQuestions(meetingId)
 
-  // Hook for top questions
+  // Hook for top questions - chỉ lấy những câu hỏi có upvote
   const { 
     data: topQuestions, 
     isLoading: topQuestionsLoading 
@@ -75,11 +74,13 @@ export default function SelectedQuestionsTab({
   // Hook for creating question
   const { mutateAsync: createQuestion, isPending: creatingQuestion } = useCreateQuestionWithVerification()
 
-  // Hook for upvoting question
-  const { mutateAsync: upvoteQuestion } = useUpvoteQuestion()
-
   // Filter selected questions
   const selectedQuestions = allMeetingQuestions?.filter((question: Question) => question.isSelected) || []
+
+  // Filter top questions - chỉ hiển thị những câu hỏi có upvoteCount > 0
+  const topQuestionsWithUpvotes = topQuestions?.filter((question: any) => 
+    question.upvoteCount && question.upvoteCount > 0
+  ) || []
 
   const handleSubmitQuestion = async () => {
     if (!questionText.trim()) {
@@ -106,30 +107,6 @@ export default function SelectedQuestionsTab({
       setQuestionDrawerOpen(false)
     } catch (error: any) {
       message.error(error?.response?.data?.message || 'Lỗi đặt câu hỏi')
-    }
-  }
-
-  const handleUpvote = async (questionId: number) => {
-    if (!shareholderInfo?.id) {
-      message.error('Vui lòng đăng nhập để upvote câu hỏi')
-      return
-    }
-
-    setUpvotingQuestions(prev => new Set(prev).add(questionId))
-
-    try {
-      await upvoteQuestion({
-        questionId,
-        shareholderId: shareholderInfo.id
-      })
-    } catch (error: any) {
-      message.error(error?.response?.data?.message || 'Upvote thất bại')
-    } finally {
-      setUpvotingQuestions(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(questionId)
-        return newSet
-      })
     }
   }
 
@@ -174,9 +151,6 @@ export default function SelectedQuestionsTab({
       return dateString
     }
   }
-
-  // Kiểm tra xem câu hỏi có đang được upvote không
-  const isUpvoting = (questionId: number) => upvotingQuestions.has(questionId)
 
   const QuestionFormComponent = (
     <QuestionForm
@@ -252,20 +226,6 @@ export default function SelectedQuestionsTab({
                 renderItem={(question: Question) => (
                   <List.Item
                     key={question.id}
-                    actions={[
-                      <Tooltip key="upvote" title="Upvote câu hỏi này">
-                        <Button 
-                          type="text" 
-                          icon={isUpvoting(question.id) ? <Spin size="small" /> : <LikeOutlined />}
-                          onClick={() => handleUpvote(question.id)}
-                          disabled={isUpvoting(question.id)}
-                          style={{ color: '#1890ff' }}
-                          size={screens.xs ? "small" : "middle"}
-                        >
-                          <Text strong>{question.upvoteCount || 0}</Text>
-                        </Button>
-                      </Tooltip>,
-                    ]}
                   >
                     <List.Item.Meta
                       title={
@@ -346,101 +306,96 @@ export default function SelectedQuestionsTab({
               title={
                 <Space>
                   <FireOutlined className="text-red-500" />
-                  <span className="text-base md:text-lg">Top Câu Hỏi</span>
+                  <span className="text-base md:text-lg">Top Câu Hỏi ({topQuestionsWithUpvotes.length})</span>
                 </Space>
               }
             >
-              <List
-                size="small"
-                dataSource={topQuestions?.slice(0, 5) || []}
-                renderItem={(question: any, index) => (
-                  <List.Item
-                    actions={[
-                      <Tooltip key="upvote" title="Upvote câu hỏi này">
-                        <Button 
-                          type="text" 
-                          size="small"
-                          icon={isUpvoting(question.id) ? <Spin size="small" /> : <LikeOutlined />}
-                          onClick={() => handleUpvote(question.id)}
-                          disabled={isUpvoting(question.id)}
-                          style={{ 
-                            color: '#1890ff',
-                            padding: '0 4px',
-                            height: 'auto'
-                          }}
-                        >
-                          <Text strong style={{ fontSize: 12 }}>{question.upvoteCount || 0}</Text>
-                        </Button>
-                      </Tooltip>
-                    ]}
-                  >
-                    <List.Item.Meta
-                      avatar={
-                        <Badge count={index + 1} size="small">
-                          <Avatar 
-                            size="small" 
-                            style={{ 
-                              backgroundColor: index < 3 ? 
-                                index === 0 ? '#fff566' : 
-                                index === 1 ? '#f0f0f0' : '#ffd591' : '#d6e4ff',
-                              width: screens.xs ? 24 : 32,
-                              height: screens.xs ? 24 : 32
-                            }}
-                          />
-                        </Badge>
-                      }
-                      title={
-                        <Text 
-                          strong 
-                          style={{ fontSize: screens.xs ? 12 : 13 }} 
-                          className="line-clamp-2"
-                        >
-                          {question.questionText}
-                        </Text>
-                      }
-                      description={
-                        <Space direction="vertical" size={0}>
-                          <Text type="secondary" style={{ fontSize: screens.xs ? 10 : 11 }}>
-                            👤 {question.shareholder?.fullName}
+              {topQuestionsWithUpvotes.length > 0 ? (
+                <List
+                  size="small"
+                  dataSource={topQuestionsWithUpvotes.slice(0, 5)}
+                  renderItem={(question: any, index) => (
+                    <List.Item>
+                      <List.Item.Meta
+                        avatar={
+                          <Badge count={index + 1} size="small">
+                            <Avatar 
+                              size="small" 
+                              style={{ 
+                                backgroundColor: index < 3 ? 
+                                  index === 0 ? '#fff566' : 
+                                  index === 1 ? '#f0f0f0' : '#ffd591' : '#d6e4ff',
+                                width: screens.xs ? 24 : 32,
+                                height: screens.xs ? 24 : 32
+                              }}
+                            />
+                          </Badge>
+                        }
+                        title={
+                          <Text 
+                            strong 
+                            style={{ fontSize: screens.xs ? 12 : 13 }} 
+                            className="line-clamp-2"
+                          >
+                            {question.questionText}
                           </Text>
-                          
-                          {/* Hiển thị câu trả lời nếu có */}
-                          {question.answerText && (
-                            <div style={{ marginTop: 4 }}>
-                              <div style={{ 
-                                padding: 6, 
-                                backgroundColor: '#f6ffed', 
-                                border: '1px solid #b7eb8f',
-                                borderRadius: 4,
-                                fontSize: screens.xs ? 10 : 11
-                              }}>
-                                <Text strong style={{ fontSize: screens.xs ? 10 : 11, color: '#389e0d' }}>
-                                  Trả lời: 
-                                </Text>
-                                <Text style={{ fontSize: screens.xs ? 10 : 11, marginLeft: 4 }} className="line-clamp-2">
-                                  {question.answerText}
-                                </Text>
-                                {question.answeredBy && (
-                                  <Text type="secondary" style={{ fontSize: screens.xs ? 9 : 10, display: 'block', marginTop: 2 }}>
-                                    - {question.answeredBy}
-                                  </Text>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Hiển thị trạng thái nếu chưa có câu trả lời */}
-                          {!question.answerText && (
-                            <Text type="secondary" style={{ fontSize: screens.xs ? 9 : 10, fontStyle: 'italic' }}>
-                              Đang chờ trả lời...
+                        }
+                        description={
+                          <Space direction="vertical" size={0}>
+                            <Text type="secondary" style={{ fontSize: screens.xs ? 10 : 11 }}>
+                              👤 {question.shareholder?.fullName}
                             </Text>
-                          )}
-                        </Space>
-                      }
-                    />
-                  </List.Item>
-                )}
-              />
+                            
+                            {/* Hiển thị số upvote */}
+                            <Text type="secondary" style={{ fontSize: screens.xs ? 10 : 11 }}>
+                              👍 {question.upvoteCount || 0} upvote
+                            </Text>
+                            
+                            {/* Hiển thị câu trả lời nếu có */}
+                            {question.answerText && (
+                              <div style={{ marginTop: 4 }}>
+                                <div style={{ 
+                                  padding: 6, 
+                                  backgroundColor: '#f6ffed', 
+                                  border: '1px solid #b7eb8f',
+                                  borderRadius: 4,
+                                  fontSize: screens.xs ? 10 : 11
+                                }}>
+                                  <Text strong style={{ fontSize: screens.xs ? 10 : 11, color: '#389e0d' }}>
+                                    Trả lời: 
+                                  </Text>
+                                  <Text style={{ fontSize: screens.xs ? 10 : 11, marginLeft: 4 }} className="line-clamp-2">
+                                    {question.answerText}
+                                  </Text>
+                                  {question.answeredBy && (
+                                    <Text type="secondary" style={{ fontSize: screens.xs ? 9 : 10, display: 'block', marginTop: 2 }}>
+                                      - {question.answeredBy}
+                                    </Text>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Hiển thị trạng thái nếu chưa có câu trả lời */}
+                            {!question.answerText && (
+                              <Text type="secondary" style={{ fontSize: screens.xs ? 9 : 10, fontStyle: 'italic' }}>
+                                Đang chờ trả lời...
+                              </Text>
+                            )}
+                          </Space>
+                        }
+                      />
+                    </List.Item>
+                  )}
+                />
+              ) : (
+                <Empty 
+                  description="Chưa có câu hỏi nào được upvote"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  imageStyle={{ height: 40 }}
+                  style={{ padding: '20px 0' }}
+                />
+              )}
             </Card>
           </Space>
         </Col>

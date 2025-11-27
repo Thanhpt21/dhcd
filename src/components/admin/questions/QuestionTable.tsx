@@ -3,10 +3,11 @@
 
 import { Table, Tag, Space, Tooltip, Input, Button, Modal, message, Select, Card, Statistic, Row, Col } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined, ExportOutlined, LikeOutlined, StarOutlined } from '@ant-design/icons'
+import { EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined, ExportOutlined, LikeOutlined, StarOutlined, StarFilled } from '@ant-design/icons'
 import { useState } from 'react'
 import { useQuestions } from '@/hooks/question/useQuestions'
 import { useUpvoteQuestion } from '@/hooks/question/useUpvoteQuestion'
+import { useSelectQuestion } from '@/hooks/question/useSelectQuestion' // ✅ THÊM HOOK MỚI
 import { useQuestionStatistics } from '@/hooks/question/useQuestionStatistics'
 import { useAllMeetings } from '@/hooks/meeting/useAllMeetings'
 import type { Question, QuestionStatus, QuestionType } from '@/types/question.type'
@@ -44,6 +45,7 @@ export default function QuestionTable() {
   
   const { mutateAsync: deleteQuestion } = useDeleteQuestion()
   const { mutateAsync: upvoteQuestion } = useUpvoteQuestion()
+  const { mutateAsync: selectQuestion, isPending: isSelecting } = useSelectQuestion() // ✅ THÊM HOOK
 
   const getTypeColor = (type: QuestionType) => {
     const colors: Record<string, string> = {
@@ -95,6 +97,17 @@ export default function QuestionTable() {
       refetch?.()
     } catch (error: any) {
       message.error(error?.response?.data?.message || 'Upvote thất bại')
+    }
+  }
+
+  // ✅ HÀM XỬ LÝ CHỌN/BỎ CHỌN CÂU HỎI
+  const handleSelectQuestion = async (questionId: number, currentSelected: boolean) => {
+    try {
+      await selectQuestion(questionId)
+      message.success(currentSelected ? 'Đã bỏ chọn câu hỏi' : 'Đã chọn câu hỏi')
+      refetch?.()
+    } catch (error: any) {
+      message.error(error?.response?.data?.message || 'Thao tác thất bại')
     }
   }
 
@@ -198,14 +211,34 @@ export default function QuestionTable() {
       dataIndex: 'isSelected',
       key: 'isSelected',
       width: 80,
-      render: (selected: boolean) => (
-        selected ? <StarOutlined style={{ color: '#fadb14' }} /> : '—'
+      render: (selected: boolean, record) => (
+        <Tooltip title={selected ? "Bỏ chọn" : "Chọn câu hỏi"}>
+          {selected ? (
+            <StarFilled 
+              style={{ 
+                color: '#fadb14', 
+                cursor: 'pointer',
+                fontSize: '16px'
+              }} 
+              onClick={() => handleSelectQuestion(record.id, true)}
+            />
+          ) : (
+            <StarOutlined 
+              style={{ 
+                color: '#d9d9d9', 
+                cursor: 'pointer',
+                fontSize: '16px'
+              }} 
+              onClick={() => handleSelectQuestion(record.id, false)}
+            />
+          )}
+        </Tooltip>
       ),
     },
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 120,
+      width: 150,
       render: (_, record) => (
         <Space size="middle">
           <Tooltip title="Xem chi tiết">
@@ -231,6 +264,25 @@ export default function QuestionTable() {
               style={{ color: '#52c41a', cursor: 'pointer' }}
               onClick={() => handleUpvote(record.id, record.shareholderId)}
             />
+          </Tooltip>
+          <Tooltip title={record.isSelected ? "Bỏ chọn" : "Chọn câu hỏi"}>
+            {record.isSelected ? (
+              <StarFilled 
+                style={{ 
+                  color: '#fadb14', 
+                  cursor: 'pointer' 
+                }} 
+                onClick={() => handleSelectQuestion(record.id, true)}
+              />
+            ) : (
+              <StarOutlined 
+                style={{ 
+                  color: '#d9d9d9', 
+                  cursor: 'pointer' 
+                }} 
+                onClick={() => handleSelectQuestion(record.id, false)}
+              />
+            )}
           </Tooltip>
           <Tooltip title="Xóa">
             <DeleteOutlined
@@ -382,8 +434,6 @@ export default function QuestionTable() {
             Đặt lại
           </Button>
         </div>
-
-      
       </div>
 
       <Table
@@ -399,10 +449,8 @@ export default function QuestionTable() {
           showTotal: (total) => `Tổng ${total} câu hỏi`,
           showSizeChanger: false,
         }}
-        scroll={{ x: 1500 }}
+        scroll={{ x: 1600 }}
       />
-
-
 
       <QuestionUpdateModal
         open={openUpdate}

@@ -11,5 +11,7 @@ export const useMeetingAttendances = (meetingId: number) => {
       return res.data.data
     },
     enabled: !!meetingId,
+     refetchInterval: 3000, 
+    refetchIntervalInBackground: true, 
   })
 }

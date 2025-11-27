@@ -23,5 +23,7 @@ export const useQuestions = (params: UseQuestionsParams = {}) => {
       })
       return res.data.data
     },
+     refetchInterval: 3000, 
+    refetchIntervalInBackground: true, 
   })
 }

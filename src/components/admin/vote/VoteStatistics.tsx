@@ -390,12 +390,6 @@ export default function VoteStatistics({ meetingId, resolutionId }: VoteStatisti
       children: renderMeetingStatistics(),
       disabled: !meetingId
     },
-    {
-      key: 'resolution',
-      label: 'Kết quả Nghị quyết',
-      children: renderResolutionStatistics(),
-      disabled: !resolutionId
-    },
   ]
 
   return (

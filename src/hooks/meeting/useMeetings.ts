@@ -23,5 +23,7 @@ export const useMeetings = ({
       })
       return res.data.data 
     },
+     refetchInterval: 3000, 
+    refetchIntervalInBackground: true, 
   })
 }

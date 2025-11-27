@@ -10,6 +10,8 @@ interface YesNoVoteProps {
 }
 
 export default function YesNoVote({ options, form }: YesNoVoteProps) {
+  console.log('✅ YesNoVote received options:', options)
+
   // Nếu không có options, tạo options mặc định cho YES_NO
   const displayOptions = options.length > 0 ? options : [
     {
@@ -34,12 +36,16 @@ export default function YesNoVote({ options, form }: YesNoVoteProps) {
       <Radio.Group className="w-full">
         <Space direction="vertical" className="w-full">
           {displayOptions.map((option: any) => (
-            <Radio key={option.id} value={option.optionValue} className="w-full py-3 px-3">
+            <Radio 
+              key={option.id} 
+              value={option.optionValue} // Sử dụng trực tiếp optionValue từ API
+              className="w-full py-3 px-3"
+            >
               <div className="flex justify-between items-center w-full">
                 <div className="flex items-center gap-3">
-                  {option.optionValue === 'YES' || option.optionText?.includes('Đồng ý') ? (
+                  {option.optionValue === 'YES' ? (
                     <Tag color="green" icon={<CheckOutlined />}>ĐỒNG Ý</Tag>
-                  ) : option.optionValue === 'NO' || option.optionText?.includes('Không') ? (
+                  ) : option.optionValue === 'NO' ? (
                     <Tag color="red" icon={<CloseOutlined />}>KHÔNG ĐỒNG Ý</Tag>
                   ) : (
                     <Tag color="blue">{option.optionText}</Tag>

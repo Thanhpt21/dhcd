@@ -10,5 +10,7 @@ export const useResolutionCandidates = (resolutionId: number) => {
       return res.data.data 
     },
     enabled: !!resolutionId,
+     refetchInterval: 3000, 
+    refetchIntervalInBackground: true, 
   })
 }

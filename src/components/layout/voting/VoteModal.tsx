@@ -9,6 +9,7 @@ import { useMeetingResolutions } from '@/hooks/resolution/useMeetingResolutions'
 import YesNoVote from './YesNoVote'
 import MultipleChoiceVote from './MultipleChoiceVote'
 import RankingVote from './RankingVote'
+import { useQueryClient } from '@tanstack/react-query'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -18,7 +19,7 @@ interface VoteModalProps {
   verificationCode: string
   meetingId: number
   shareholderInfo?: any
-  selectedResolutionId?: number // Thay vì resolution object, chỉ cần ID
+  selectedResolutionId?: number
 }
 
 export default function VoteModal({ 
@@ -32,11 +33,12 @@ export default function VoteModal({
   const [form] = Form.useForm()
   const [selectedOptions, setSelectedOptions] = useState<string[]>([])
   const { mutateAsync: submitVote, isPending, error } = useCreateVote()
+  const queryClient = useQueryClient()
   
-  // Sử dụng hook để lấy danh sách resolutions của meeting
+  // Hook để lấy danh sách resolutions
   const { data: meetingResolutions, isLoading: isLoadingResolutions } = useMeetingResolutions(meetingId)
 
-  // Tìm resolution được chọn từ danh sách
+  // Tìm resolution được chọn
   const resolution = selectedResolutionId 
     ? meetingResolutions?.find((r: any) => r.id === selectedResolutionId)
     : null
@@ -49,7 +51,7 @@ export default function VoteModal({
     }
   }, [resolution, open, form])
 
-  // Kiểm tra resolution có tồn tại không
+  // Kiểm tra nếu resolution không tồn tại
   if (!resolution && !isLoadingResolutions) {
     return null
   }
@@ -163,96 +165,97 @@ export default function VoteModal({
             voteData.voteValue = values.voteOption
         }
 
-        console.log("voteData", voteData)
+        
         
         await submitVote(voteData)
+        await queryClient.invalidateQueries({ 
+          queryKey: ['meetingResolutions', meetingId] 
+        })
+      
         message.success('Bỏ phiếu thành công!')
         onClose()
     } catch (error: any) {
         console.error('❌ Error submitting vote:', error)
         message.error(error.response?.data?.message || 'Bỏ phiếu thất bại')
     }
-    }
+  }
 
   const renderVotingComponent = () => {
+    // Xác định dữ liệu voting dựa trên votingMethod
+    let votingData: any[] = []
+    let dataType: 'options' | 'candidates' = 'options'
 
-  // Xác định dữ liệu voting dựa trên votingMethod
-  let votingData: any[] = []
-  let dataType: 'options' | 'candidates' = 'options'
-
-  switch (resolution.votingMethod) {
-    case 'YES_NO':
-    case 'MULTIPLE_CHOICE':
-      votingData = resolution?.options || []
-      dataType = 'options'
-      break
-    
-    case 'RANKING':
-      votingData = resolution?.candidates || []
-      dataType = 'candidates'
-      break
-    
-    default:
-      votingData = resolution?.options || []
-      dataType = 'options'
-  }
-
-  // Kiểm tra dữ liệu voting
-  if (votingData.length === 0) {
-    return (
-      <Alert
-        message={`Không có ${dataType === 'candidates' ? 'ứng cử viên' : 'phương án'} bỏ phiếu`}
-        description={`Nghị quyết này chưa được cấu hình ${dataType === 'candidates' ? 'ứng cử viên' : 'phương án'} bỏ phiếu.`}
-        type="error"
-        showIcon
-      />
-    )
-  }
-
-  // Chuẩn hóa dữ liệu options
-  const normalizedOptions = votingData.map((item: any, index: number) => {
-    if (dataType === 'candidates') {
-      return {
-        id: item.id.toString(),
-        optionText: item.candidateName,
-        optionValue: item.candidateCode,
-        description: item.candidateInfo, // Dùng candidateInfo cho description
-        displayOrder: item.displayOrder
-      }
-    } else {
-      return {
-        id: item.id.toString(),
-        optionText: item.optionText,
-        optionValue: item.optionValue,
-        description: item.description,
-        displayOrder: item.displayOrder
-      }
+    switch (resolution.votingMethod) {
+      case 'YES_NO':
+      case 'MULTIPLE_CHOICE':
+        votingData = resolution?.options || []
+        dataType = 'options'
+        break
+      
+      case 'RANKING':
+        votingData = resolution?.candidates || []
+        dataType = 'candidates'
+        break
+      
+      default:
+        votingData = resolution?.options || []
+        dataType = 'options'
     }
-  })
 
-
-  switch (resolution.votingMethod) {
-    case 'YES_NO':
-      return <YesNoVote options={normalizedOptions} form={form} />
-    
-    case 'MULTIPLE_CHOICE':
+    // Kiểm tra dữ liệu voting
+    if (votingData.length === 0) {
       return (
-        <MultipleChoiceVote 
-          options={normalizedOptions} 
-          form={form}
-          selectedOptions={selectedOptions}
-          onOptionChange={handleOptionChange}
+        <Alert
+          message={`Không có ${dataType === 'candidates' ? 'ứng cử viên' : 'phương án'} bỏ phiếu`}
+          description={`Nghị quyết này chưa được cấu hình ${dataType === 'candidates' ? 'ứng cử viên' : 'phương án'} bỏ phiếu.`}
+          type="error"
+          showIcon
         />
       )
-    
-    case 'RANKING':
-      return <RankingVote options={normalizedOptions} form={form} />
-    
-    default:
-      return <YesNoVote options={normalizedOptions} form={form} />
-  }
-}
+    }
 
+    // Chuẩn hóa dữ liệu options
+    const normalizedOptions = votingData.map((item: any, index: number) => {
+      if (dataType === 'candidates') {
+        return {
+          id: item.id.toString(),
+          optionText: item.candidateName,
+          optionValue: item.candidateCode,
+          description: item.candidateInfo,
+          displayOrder: item.displayOrder
+        }
+      } else {
+        return {
+          id: item.id.toString(),
+          optionText: item.optionText,
+          optionValue: item.optionValue,
+          description: item.description,
+          displayOrder: item.displayOrder
+        }
+      }
+    })
+
+    switch (resolution.votingMethod) {
+      case 'YES_NO':
+        return <YesNoVote options={normalizedOptions} form={form} />
+      
+      case 'MULTIPLE_CHOICE':
+        return (
+          <MultipleChoiceVote 
+            options={normalizedOptions} 
+            form={form}
+            selectedOptions={selectedOptions}
+            onOptionChange={handleOptionChange}
+          />
+        )
+      
+      case 'RANKING':
+        return <RankingVote options={normalizedOptions} form={form} />
+      
+      default:
+        return <YesNoVote options={normalizedOptions} form={form} />
+    }
+  }
 
   return (
     <Modal

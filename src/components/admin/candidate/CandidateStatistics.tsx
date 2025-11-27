@@ -16,13 +16,15 @@ interface CandidateStats {
   totalCandidates: number
   electedCandidates: number
   totalVotes: number
-  averageVotesPerCandidate: number
+  averageVotesPerCandidate: string 
   topCandidate: ResolutionCandidate | null
 }
 
 export default function CandidateStatistics({ resolutionId }: CandidateStatisticsProps) {
   const { data: statistics, isLoading: statsLoading } = useCandidateStatistics(resolutionId)
   const { data: candidates, isLoading: candidatesLoading } = useResolutionCandidates(resolutionId)
+
+  console.log("statistics", statistics)
 
   const isLoading = statsLoading || candidatesLoading
 
@@ -41,8 +43,9 @@ export default function CandidateStatistics({ resolutionId }: CandidateStatistic
     key: candidate.id,
     rank: index + 1,
     ...candidate,
-    votePercentage: stats.totalVotes > 0 ? (candidate.voteCount / stats.totalVotes) * 100 : 0
-  })).sort((a: any, b: any) => b.voteCount - a.voteCount) || []
+    voteCount: candidate.voteCount || 0, // Đảm bảo có giá trị mặc định
+    votePercentage: stats?.totalVotes > 0 ? ((candidate.voteCount || 0) / stats.totalVotes) * 100 : 0
+  })).sort((a: any, b: any) => (b.voteCount || 0) - (a.voteCount || 0)) || []
 
   // Top 3 candidates
   const topCandidates = rankingData.slice(0, 3)
@@ -174,13 +177,13 @@ export default function CandidateStatistics({ resolutionId }: CandidateStatistic
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic
-              title="Phiếu trung bình"
-              value={stats?.averageVotesPerCandidate || 0}
-              precision={1}
-              valueStyle={{ color: '#fa8c16' }}
-              loading={isLoading}
-            />
+              <Statistic
+                title="Phiếu trung bình"
+                value={stats?.averageVotesPerCandidate ? parseFloat(stats.averageVotesPerCandidate) : 0}
+                precision={1}
+                valueStyle={{ color: '#fa8c16' }}
+                loading={isLoading}
+              />
           </Card>
         </Col>
       </Row>
@@ -206,10 +209,10 @@ export default function CandidateStatistics({ resolutionId }: CandidateStatistic
                 `}>
                   {index === 0 && <CrownOutlined className="text-yellow-600 text-2xl mb-2" />}
                   <div className={`font-semibold ${index === 0 ? 'text-lg' : 'text-base'}`}>
-                    {candidate.candidateName}
+                    {candidate.candidateName || 'N/A'}
                   </div>
                   <div className="text-sm text-gray-600 mt-1">
-                    {candidate.voteCount.toLocaleString()} phiếu
+                    {(candidate.voteCount || 0).toLocaleString()} phiếu
                   </div>
                 </div>
                 <div className={`
@@ -237,9 +240,9 @@ export default function CandidateStatistics({ resolutionId }: CandidateStatistic
                   <div className="font-semibold">
                     {stats?.electedCandidates || 0} / {stats?.totalCandidates || 0}
                   </div>
-                  <Progress 
-                    percent={stats?.totalCandidates ? 
-                      ((stats.electedCandidates / stats.totalCandidates) * 100) : 0
+                 <Progress 
+                    percent={stats?.totalCandidates && stats.totalCandidates > 0 ? 
+                      ((stats.electedCandidates || 0) / stats.totalCandidates) * 100 : 0
                     } 
                     size="small" 
                     strokeColor="#52c41a"
@@ -324,7 +327,7 @@ export default function CandidateStatistics({ resolutionId }: CandidateStatistic
       </Card>
 
       {/* Quick Stats */}
-      {stats?.topCandidate && (
+      {stats?.topCandidate && stats.topCandidate.voteCount !== undefined && (
         <Card title="Ứng cử viên Dẫn đầu" loading={isLoading}>
           <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
             <div className="flex items-center gap-4">
@@ -332,8 +335,8 @@ export default function CandidateStatistics({ resolutionId }: CandidateStatistic
                 <CrownOutlined className="text-yellow-600 text-2xl" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold">{stats.topCandidate.candidateName}</h3>
-                <p className="text-gray-600">{stats.topCandidate.candidateCode}</p>
+                <h3 className="text-lg font-semibold">{stats.topCandidate.candidateName || 'N/A'}</h3>
+                <p className="text-gray-600">{stats.topCandidate.candidateCode || 'N/A'}</p>
                 {stats.topCandidate.candidateInfo && (
                   <p className="text-sm text-gray-500 mt-1">{stats.topCandidate.candidateInfo}</p>
                 )}
@@ -341,11 +344,11 @@ export default function CandidateStatistics({ resolutionId }: CandidateStatistic
             </div>
             <div className="text-right">
               <div className="text-3xl font-bold text-blue-600">
-                {stats.topCandidate.voteCount.toLocaleString()}
+                {(stats.topCandidate.voteCount || 0).toLocaleString()}
               </div>
               <div className="text-gray-600">phiếu bầu</div>
               <Tag color="green" className="mt-2">
-                {((stats.topCandidate.voteCount / (stats.totalVotes || 1)) * 100).toFixed(1)}% tổng phiếu
+                {((stats.topCandidate.voteCount || 0) / (stats.totalVotes || 1) * 100).toFixed(1)}% tổng phiếu
               </Tag>
             </div>
           </div>

@@ -10,19 +10,20 @@ import OptionList from './OptionList'
 import OptionForm from './OptionForm'
 import OptionStatistics from './OptionStatistics'
 import type { ResolutionOption } from '@/types/option.type'
+import { VotingMethod } from '@/types/resolution.type'
 
 interface OptionManagementProps {
   resolutionId: number
   resolutionCode: string
   resolutionTitle: string
-  votingMethod: string
+  votingMethod: string // Đây là prop được truyền vào
 }
 
 export default function OptionManagement({ 
   resolutionId, 
   resolutionCode, 
   resolutionTitle,
-  votingMethod 
+  votingMethod // ✅ SỬ DỤNG PROP NÀY
 }: OptionManagementProps) {
   const [openCreate, setOpenCreate] = useState(false)
   const [activeTab, setActiveTab] = useState('list')
@@ -50,6 +51,16 @@ export default function OptionManagement({
       'RANKING': 'Xếp hạng'
     }
     return methods[method] || method
+  }
+
+  // ✅ CHUYỂN ĐỔI votingMethod string sang enum VotingMethod
+  const getVotingMethodEnum = (method: string): VotingMethod => {
+    const methodMap: Record<string, VotingMethod> = {
+      'YES_NO': VotingMethod.YES_NO,
+      'MULTIPLE_CHOICE': VotingMethod.MULTIPLE_CHOICE,
+      'RANKING': VotingMethod.RANKING
+    }
+    return methodMap[method] || VotingMethod.MULTIPLE_CHOICE
   }
 
   const tabItems = [
@@ -131,7 +142,6 @@ export default function OptionManagement({
         />
       )}
 
-
       <Card
         title="Quản lý Phương án Bỏ phiếu"
         extra={
@@ -151,21 +161,25 @@ export default function OptionManagement({
         />
       </Card>
 
-      {/* Create Modal */}
+      {/* Create Modal - ✅ SỬA: SỬ DỤNG PROP votingMethod */}
       <OptionForm
         open={openCreate}
         onClose={() => setOpenCreate(false)}
         onSuccess={handleCreateSuccess}
         resolutionId={resolutionId}
+        votingMethod={getVotingMethodEnum(votingMethod)} // ✅ SỬA: DÙNG PROP votingMethod
+        existingOptions={options || []}
       />
 
-      {/* Update Modal */}
+      {/* Update Modal - ✅ SỬA: SỬ DỤNG PROP votingMethod */}
       <OptionForm
         open={!!selectedOption}
         onClose={() => setSelectedOption(null)}
         onSuccess={handleUpdateSuccess}
         resolutionId={resolutionId}
         option={selectedOption}
+        votingMethod={getVotingMethodEnum(votingMethod)} // ✅ SỬA: DÙNG PROP votingMethod
+        existingOptions={options || []}
         isEdit
       />
     </div>

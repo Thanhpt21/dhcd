@@ -18,5 +18,7 @@ export const useRegistrations = (params: UseRegistrationsParams = {}) => {
       const res = await api.get('/registrations', { params })
       return res.data.data
     },
+     refetchInterval: 3000, 
+    refetchIntervalInBackground: true, 
   })
 }

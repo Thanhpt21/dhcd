@@ -3,7 +3,7 @@ import { Form, Checkbox, Space, Typography, Tag, Alert } from 'antd'
 import { CheckSquareOutlined } from '@ant-design/icons'
 import { useState } from 'react'
 
-const { Text } = Typography
+const { Text, Title } = Typography
 
 interface MultipleChoiceVoteProps {
   options: any[]
@@ -39,22 +39,48 @@ export default function MultipleChoiceVote({
         rules={[{ required: true, message: 'Vui lòng chọn ít nhất một phương án' }]}
       >
         <Checkbox.Group className="w-full">
-          <Space direction="vertical" className="w-full">
+          <Space direction="vertical" className="w-full" size="middle">
             {options.map((option: any) => (
-              <Checkbox 
-                key={option.id} 
-                value={option.id}
-                onChange={(e) => handleCheckboxChange(option.id, e.target.checked)}
-                className="w-full py-3 px-3 hover:bg-gray-50"
+              <div
+                key={option.id}
+                className={`p-4 border rounded-lg transition-colors ${
+                  selectedOptions.includes(option.id) ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                }`}
               >
-                <div className="flex justify-between items-center w-full">
-                  {option.description && (
-                    <Text type="secondary" className="text-sm">
-                      {option.description}
-                    </Text>
+                <div className="flex items-start gap-3">
+                  <Checkbox 
+                    value={option.id}
+                    checked={selectedOptions.includes(option.id)}
+                    onChange={(e) => handleCheckboxChange(option.id, e.target.checked)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    {/* ✅ HIỂN THỊ TÊN PHƯƠNG ÁN */}
+                    <Title level={5} className="!mb-1 !text-gray-800">
+                      {option.optionText}
+                    </Title>
+                    
+                    {/* ✅ HIỂN THỊ MÔ TẢ NẾU CÓ */}
+                    {option.description && (
+                      <Text type="secondary" className="text-sm">
+                        {option.description}
+                      </Text>
+                    )}
+                    
+                    {/* ✅ HIỂN THỊ MÃ PHƯƠNG ÁN */}
+                    <div className="mt-2">
+                      <Tag color="blue" className="text-xs">
+                        {option.optionCode}
+                      </Tag>
+                    </div>
+                  </div>
+                  
+                  {/* ✅ ICON KHI ĐƯỢC CHỌN */}
+                  {selectedOptions.includes(option.id) && (
+                    <CheckSquareOutlined className="text-green-500 text-lg mt-1" />
                   )}
                 </div>
-              </Checkbox>
+              </div>
             ))}
           </Space>
         </Checkbox.Group>
@@ -69,6 +95,15 @@ export default function MultipleChoiceVote({
           className="mt-2"
         />
       )}
+
+      {/* ✅ HƯỚNG DẪN SỬ DỤNG */}
+      <Alert
+        message="Hướng dẫn bỏ phiếu"
+        description="Click vào ô checkbox để chọn phương án bỏ phiếu"
+        type="info"
+        showIcon
+        className="mt-4"
+      />
     </div>
   )
 }

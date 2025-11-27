@@ -1,14 +1,16 @@
 // src/components/admin/verification/VerificationLinkGenerateBatchModal.tsx
 'use client'
 
-import { Modal, Form, Select, InputNumber, Button, message, Table, Tag, Space } from 'antd'
-import { useState, useEffect } from 'react'
+import { Modal, Form, Select, InputNumber, Button, message, Table, Tag, Space, Alert, Descriptions } from 'antd'
+import { useState, useEffect, useMemo } from 'react'
 import { useGenerateBatchVerificationLinks } from '@/hooks/verification/useGenerateBatchVerificationLinks'
 import { useAllMeetings } from '@/hooks/meeting/useAllMeetings'
 import { useAllShareholders } from '@/hooks/shareholder/useAllShareholders'
 import { useMeetingRegistrations } from '@/hooks/registration/useMeetingRegistrations'
+import { useMeetingAttendances } from '@/hooks/attendance/useMeetingAttendances'
 import type { Shareholder } from '@/types/shareholder.type'
 import type { Registration } from '@/types/registration.type'
+import type { Attendance } from '@/types/attendance.type'
 import type { ColumnsType } from 'antd/es/table'
 
 const { Option } = Select
@@ -31,6 +33,8 @@ interface TableData {
   registrationType?: string
   status?: string
   sharesRegistered?: number
+  hasExistingRecord?: boolean
+  existingRecordType?: 'ATTENDANCE' | 'REGISTRATION'
 }
 
 export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: Props) {
@@ -42,7 +46,12 @@ export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: P
   const { mutateAsync: generateBatch, isPending } = useGenerateBatchVerificationLinks()
   const { data: meetings } = useAllMeetings()
   const { data: shareholders, isLoading: isLoadingShareholders } = useAllShareholders()
+  
   const { data: registrations, isLoading: isLoadingRegistrations } = useMeetingRegistrations(
+    selectedMeetingId || 0
+  )
+
+  const { data: attendances } = useMeetingAttendances(
     selectedMeetingId || 0
   )
 
@@ -57,6 +66,32 @@ export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: P
     }
   }, [open, form])
 
+  // ✅ Lấy thông tin meeting được chọn
+  const selectedMeeting = useMemo(() => {
+    return meetings?.find((meeting: any) => meeting.id === selectedMeetingId) || null
+  }, [meetings, selectedMeetingId])
+
+  // ✅ Kiểm tra thời gian đăng ký
+  const isWithinRegistrationTime = useMemo(() => {
+    if (!selectedMeeting || !selectedMeeting.registrationStart || !selectedMeeting.registrationEnd) {
+      return false
+    }
+    
+    const now = new Date()
+    const registrationStart = new Date(selectedMeeting.registrationStart)
+    const registrationEnd = new Date(selectedMeeting.registrationEnd)
+    
+    return now >= registrationStart && now <= registrationEnd
+  }, [selectedMeeting])
+
+  // ✅ Kiểm tra có thể tạo link không
+  const canCreateLinks = useMemo(() => {
+    if (verificationType === 'REGISTRATION') {
+      return isWithinRegistrationTime
+    }
+    return true // Điểm danh không bị giới hạn thời gian
+  }, [verificationType, isWithinRegistrationTime])
+
   const handleMeetingChange = (meetingId: number) => {
     setSelectedMeetingId(meetingId)
     setSelectedShareholders([])
@@ -67,6 +102,29 @@ export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: P
     setSelectedShareholders([])
   }
 
+  const formatDateTime = (dateString: string) => {
+    if (!dateString) return 'Chưa có thông tin'
+    try {
+      return new Date(dateString).toLocaleString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    } catch (error) {
+      return dateString
+    }
+  }
+
+  const existingAttendanceShareholderIds = useMemo(() => {
+    return new Set(attendances?.map((att: Attendance) => att.shareholderId) || [])
+  }, [attendances])
+
+  const existingRegistrationShareholderIds = useMemo(() => {
+    return new Set(registrations?.map((reg: Registration) => reg.shareholderId) || [])
+  }, [registrations])
+
   const handleSubmit = async (values: any) => {
     if (selectedShareholders.length === 0) {
       message.error('Vui lòng chọn ít nhất một cổ đông')
@@ -75,6 +133,12 @@ export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: P
 
     if (!selectedMeetingId) {
       message.error('Vui lòng chọn cuộc họp')
+      return
+    }
+
+    // ✅ Kiểm tra thời gian đăng ký
+    if (verificationType === 'REGISTRATION' && !isWithinRegistrationTime) {
+      message.error('Không thể tạo link đăng ký vì ngoài thời gian đăng ký')
       return
     }
 
@@ -93,11 +157,11 @@ export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: P
     }
   }
 
-  // Chuyển đổi dữ liệu thành format chung
   const getDisplayData = (): TableData[] => {
+    let baseData: TableData[] = []
+
     if (verificationType === 'ATTENDANCE') {
-      // Điểm danh: chỉ hiển thị cổ đông đã đăng ký
-      return (registrations || []).map((reg: Registration) => ({
+      baseData = (registrations || []).map((reg: Registration) => ({
         id: reg.shareholderId,
         shareholderId: reg.shareholderId,
         shareholderCode: reg.shareholder.shareholderCode,
@@ -108,11 +172,12 @@ export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: P
         isActive: reg.shareholder.isActive,
         registrationType: reg.registrationType,
         status: reg.status,
-        sharesRegistered: reg.sharesRegistered
+        sharesRegistered: reg.sharesRegistered,
+        hasExistingRecord: existingAttendanceShareholderIds.has(reg.shareholderId),
+        existingRecordType: 'ATTENDANCE'
       }))
     } else {
-      // Đăng ký: hiển thị tất cả cổ đông
-      return (shareholders || []).map((sh: Shareholder) => ({
+      baseData = (shareholders || []).map((sh: Shareholder) => ({
         id: sh.id,
         shareholderId: sh.id,
         shareholderCode: sh.shareholderCode,
@@ -120,9 +185,13 @@ export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: P
         email: sh.email,
         totalShares: sh.totalShares,
         idNumber: sh.idNumber,
-        isActive: sh.isActive
+        isActive: sh.isActive,
+        hasExistingRecord: existingRegistrationShareholderIds.has(sh.id),
+        existingRecordType: 'REGISTRATION'
       }))
     }
+
+    return baseData
   }
 
   const columns: ColumnsType<TableData> = [
@@ -147,6 +216,24 @@ export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: P
       dataIndex: 'totalShares',
       key: 'totalShares',
       render: (shares: number) => shares?.toLocaleString() || '0',
+    },
+    {
+      title: 'Trạng thái',
+      key: 'existingStatus',
+      render: (_, record) => {
+        if (record.hasExistingRecord) {
+          return (
+            <Tag color="orange">
+              Đã {record.existingRecordType === 'ATTENDANCE' ? 'điểm danh' : 'đăng ký'}
+            </Tag>
+          )
+        }
+        return (
+          <Tag color="green">
+            Chưa {verificationType === 'ATTENDANCE' ? 'điểm danh' : 'đăng ký'}
+          </Tag>
+        )
+      },
     },
     ...(verificationType === 'ATTENDANCE' ? [
       {
@@ -180,7 +267,7 @@ export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: P
       }
     ] : []),
     {
-      title: 'Trạng thái',
+      title: 'Hoạt động',
       dataIndex: 'isActive',
       key: 'isActive',
       render: (isActive: boolean) => (
@@ -189,27 +276,31 @@ export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: P
         </Tag>
       ),
     },
-    {
-      title: 'Trạng thái email',
-      key: 'emailStatus',
-      render: (_, record) => (
-        <Tag color={record.email ? 'green' : 'red'}>
-          {record.email ? 'Có email' : 'Không có email'}
-        </Tag>
-      ),
-    },
   ]
 
-  // Row selection config
   const rowSelection = {
     selectedRowKeys: selectedShareholders,
     onChange: (selectedKeys: React.Key[]) => {
       setSelectedShareholders(selectedKeys as number[])
     },
+    getCheckboxProps: (record: TableData) => ({
+      disabled: record.hasExistingRecord,
+    }),
   }
 
   const displayData = getDisplayData()
   const isLoading = verificationType === 'ATTENDANCE' ? isLoadingRegistrations : isLoadingShareholders
+
+  const stats = useMemo(() => {
+    const total = displayData.length
+    const existingCount = displayData.filter(item => item.hasExistingRecord).length
+    const availableCount = total - existingCount
+    const selectedExistingCount = selectedShareholders.filter(id => 
+      displayData.find(item => item.shareholderId === id && item.hasExistingRecord)
+    ).length
+
+    return { total, existingCount, availableCount, selectedExistingCount }
+  }, [displayData, selectedShareholders])
 
   return (
     <Modal
@@ -261,6 +352,31 @@ export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: P
           </Form.Item>
         </div>
 
+        {/* ✅ HIỂN THỊ THÔNG TIN THỜI GIAN ĐĂNG KÝ */}
+        {selectedMeeting && verificationType === 'REGISTRATION' && (
+          <Alert
+            message="Thông tin thời gian đăng ký"
+            description={
+              <Descriptions size="small" column={2} className="mt-2">
+                <Descriptions.Item label="Bắt đầu" span={1}>
+                  {formatDateTime(selectedMeeting.registrationStart)}
+                </Descriptions.Item>
+                <Descriptions.Item label="Kết thúc" span={1}>
+                  {formatDateTime(selectedMeeting.registrationEnd)}
+                </Descriptions.Item>
+                <Descriptions.Item label="Trạng thái" span={2}>
+                  <Tag color={isWithinRegistrationTime ? 'green' : 'red'}>
+                    {isWithinRegistrationTime ? 'Đang trong thời gian đăng ký' : 'Ngoài thời gian đăng ký'}
+                  </Tag>
+                </Descriptions.Item>
+              </Descriptions>
+            }
+            type={isWithinRegistrationTime ? 'info' : 'error'}
+            showIcon
+            className="mb-4"
+          />
+        )}
+
         <Form.Item
           name="expiresInHours"
           label="Thời hạn (giờ)"
@@ -273,6 +389,29 @@ export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: P
             placeholder="Số giờ có hiệu lực"
           />
         </Form.Item>
+
+        {/* Thống kê */}
+        <Alert
+          message={`Thống kê: ${stats.availableCount} cổ đông có thể tạo link / ${stats.total} tổng số`}
+          description={
+            stats.existingCount > 0 
+              ? `Đã có ${stats.existingCount} cổ đông ${verificationType === 'ATTENDANCE' ? 'điểm danh' : 'đăng ký'} (không thể chọn)`
+              : 'Tất cả cổ đông đều có thể tạo link'
+          }
+          type={stats.availableCount > 0 ? 'info' : 'warning'}
+          showIcon
+          className="mb-4"
+        />
+
+        {stats.selectedExistingCount > 0 && (
+          <Alert
+            message={`Đang chọn ${stats.selectedExistingCount} cổ đông đã ${verificationType === 'ATTENDANCE' ? 'điểm danh' : 'đăng ký'}`}
+            description="Những cổ đông này sẽ không được tạo link mới"
+            type="warning"
+            showIcon
+            className="mb-4"
+          />
+        )}
 
         <Form.Item label={`Chọn cổ đông ${verificationType === 'ATTENDANCE' ? '(đã đăng ký)' : '(tất cả)'}`}>
           {!selectedMeetingId && verificationType === 'ATTENDANCE' ? (
@@ -288,7 +427,7 @@ export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: P
               <div className="mb-2 flex justify-between items-center">
                 <div>
                   <span className="text-sm font-medium">
-                    Đã chọn: <strong>{selectedShareholders.length}</strong> / {displayData.length} cổ đông
+                    Đã chọn: <strong>{selectedShareholders.length}</strong> / {stats.availableCount} cổ đông có thể chọn
                   </span>
                   <div className="text-xs text-gray-500 mt-1">
                     {verificationType === 'ATTENDANCE' 
@@ -311,12 +450,14 @@ export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: P
                       type="link" 
                       size="small" 
                       onClick={() => {
-                        const allIds = displayData.map((item) => item.shareholderId)
-                        setSelectedShareholders(allIds)
+                        const availableIds = displayData
+                          .filter(item => !item.hasExistingRecord)
+                          .map(item => item.shareholderId)
+                        setSelectedShareholders(availableIds)
                       }}
                       className="text-blue-500"
                     >
-                      Chọn tất cả
+                      Chọn tất cả có thể
                     </Button>
                   </Space>
                 )}
@@ -353,9 +494,12 @@ export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: P
             type="primary" 
             htmlType="submit" 
             loading={isPending}
-            disabled={selectedShareholders.length === 0 || !selectedMeetingId}
+            disabled={selectedShareholders.length === 0 || !selectedMeetingId || !canCreateLinks}
           >
-            Tạo {selectedShareholders.length} Link
+            {!canCreateLinks && verificationType === 'REGISTRATION' 
+              ? 'Ngoài thời gian đăng ký' 
+              : `Tạo ${selectedShareholders.length} Link`
+            }
           </Button>
         </div>
       </Form>

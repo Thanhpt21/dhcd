@@ -10,7 +10,5 @@ export const useMeetingResolutions = (meetingId: number) => {
       return res.data.data 
     },
     enabled: !!meetingId,
-    refetchInterval: 3000, // Refetch mỗi 3 giây
-    refetchIntervalInBackground: true, // Refetch cả khi tab không active
   })
 }

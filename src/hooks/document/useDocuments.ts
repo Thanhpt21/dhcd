@@ -27,5 +27,7 @@ export const useDocuments = ({
       })
       return res.data.data 
     },
+     refetchInterval: 3000, 
+    refetchIntervalInBackground: true, 
   })
 }
