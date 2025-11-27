@@ -25,14 +25,12 @@ export function GenerateReportModal({ open, onClose, existingReport, refetch }: 
   // Lấy tất cả meetings và lọc những cái có status COMPLETED
   const { data: allMeetingsData } = useAllMeetings()
 
-  console.log("allMeetingsData", allMeetingsData)
   
   // Lọc meetings có status COMPLETED
     const completedMeetings = Array.isArray(allMeetingsData) 
     ? allMeetingsData.filter((meeting: any) => meeting.status === 'COMPLETED')
     : []
 
-    console.log("completedMeetings", completedMeetings)
 
   useEffect(() => {
     if (existingReport && open) {
@@ -99,11 +97,11 @@ export function GenerateReportModal({ open, onClose, existingReport, refetch }: 
           <Col span={12}>
             <Form.Item
               name="meetingId"
-              label="Cuộc họp"
-              rules={[{ required: true, message: 'Vui lòng chọn cuộc họp' }]}
+              label="Cuộc họp (Đã hoàn thành)"
+              rules={[{ required: true, message: 'Vui lòng chọn cuộc họp đã hoàn thành' }]}
             >
               <Select 
-                placeholder="Chọn cuộc họp"
+                placeholder="Chọn cuộc họp đã hoàn thành"
                 showSearch
                 optionFilterProp="children"
                 filterOption={(input, option) => {

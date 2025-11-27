@@ -101,7 +101,7 @@ export default function SelectedQuestionsTab({
       }
       
       await createQuestion(payload)
-      message.success('Đặt câu hỏi thành công!')
+      message.success('Đặt câu hỏi thành công! Vui lòng đợi quản trị viên duyệt và hiển thị')
       setQuestionText('')
       setQuestionDropdownOpen(false)
       setQuestionDrawerOpen(false)

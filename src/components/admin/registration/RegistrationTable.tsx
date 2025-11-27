@@ -3,7 +3,7 @@
 
 import { Table, Tag, Space, Tooltip, Input, Button, Modal, message, Select } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
+import { EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, StopOutlined } from '@ant-design/icons'
 import { useState } from 'react'
 import { useRegistrations } from '@/hooks/registration/useRegistrations'
 import { useDeleteRegistration } from '@/hooks/registration/useDeleteRegistration'
@@ -82,15 +82,22 @@ export default function RegistrationTable() {
   }
 
   const handleStatusChange = async (registrationId: number, newStatus: string) => {
-    try {
-      await updateStatus({ id: registrationId, status: newStatus })
-      message.success('Cập nhật trạng thái thành công')
-      refetch?.()
-    } catch (error: any) {
-      message.error(error?.response?.data?.message || 'Cập nhật thất bại')
-    }
+    Modal.confirm({
+      title: 'Xác nhận thay đổi trạng thái',
+      content: `Bạn có chắc chắn muốn chuyển trạng thái thành "${getStatusText(newStatus)}"?`,
+      okText: 'Xác nhận',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        try {
+          await updateStatus({ id: registrationId, status: newStatus })
+          message.success('Cập nhật trạng thái thành công')
+          refetch?.()
+        } catch (error: any) {
+          message.error(error?.response?.data?.message || 'Cập nhật thất bại')
+        }
+      },
+    })
   }
-
 
 
   // Hàm kiểm tra xem đã tới thời điểm checkin chưa
@@ -141,16 +148,46 @@ export default function RegistrationTable() {
         </Tag>
       ),
     },
-    {
+   {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
       render: (status: RegistrationStatus | string, record: Registration) => (
-        <Tag color={getStatusColor(status)}>
-          {getStatusText(status)}
-        </Tag>
+        <Select
+          value={status}
+          onChange={(newStatus) => handleStatusChange(record.id, newStatus)}
+          style={{ width: 130 }}
+          size="small"
+          dropdownStyle={{ minWidth: 150 }}
+        >
+          <Option value="PENDING">
+            <div className="flex items-center gap-2">
+              <ClockCircleOutlined style={{ color: '#fa8c16' }} />
+              <span>Chờ duyệt</span>
+            </div>
+          </Option>
+          <Option value="APPROVED">
+            <div className="flex items-center gap-2">
+              <CheckCircleOutlined style={{ color: '#1890ff' }} />
+              <span>Đã duyệt</span>
+            </div>
+          </Option>
+          <Option value="REJECTED">
+            <div className="flex items-center gap-2">
+              <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
+              <span>Từ chối</span>
+            </div>
+          </Option>
+          <Option value="CANCELLED">
+            <div className="flex items-center gap-2">
+              <StopOutlined style={{ color: '#8c8c8c' }} />
+              <span>Đã hủy</span>
+            </div>
+          </Option>
+        </Select>
       ),
     },
+
 
     {
       title: 'Chi tiết',

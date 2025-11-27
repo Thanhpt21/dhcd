@@ -228,6 +228,7 @@ export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: P
             </Tag>
           )
         }
+       
         return (
           <Tag color="green">
             Chưa {verificationType === 'ATTENDANCE' ? 'điểm danh' : 'đăng ký'}
@@ -284,7 +285,7 @@ export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: P
       setSelectedShareholders(selectedKeys as number[])
     },
     getCheckboxProps: (record: TableData) => ({
-      disabled: record.hasExistingRecord,
+       disabled: record.hasExistingRecord || (verificationType === 'ATTENDANCE' && record.status !== 'APPROVED')
     }),
   }
 

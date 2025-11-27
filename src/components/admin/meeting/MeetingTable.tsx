@@ -288,12 +288,7 @@ export default function MeetingTable() {
                 onClick={() => router.push(`/admin/meetings/${record.id}/agendas`)}
               />
             </Tooltip>
-            <Tooltip title="Phiếu bầu">
-              <AuditOutlined
-                style={{ color: '#13c2c2', cursor: 'pointer' }}
-                onClick={() => router.push(`/admin/meetings/${record.id}/votes`)}
-              />
-            </Tooltip>
+           
            <Tooltip title="Nghị quyết">
             <FileTextOutlined
               style={{ color: '#722ed1', cursor: 'pointer' }}
@@ -318,6 +313,12 @@ export default function MeetingTable() {
               }}
             />
           </Tooltip>
+           <Tooltip title="Phiếu bầu">
+              <AuditOutlined
+                style={{ color: '#13c2c2', cursor: 'pointer' }}
+                onClick={() => router.push(`/admin/meetings/${record.id}/votes`)}
+              />
+            </Tooltip>
           <Tooltip title="Chỉnh sửa">
             <EditOutlined
               style={{ color: '#faad14', cursor: 'pointer' }}

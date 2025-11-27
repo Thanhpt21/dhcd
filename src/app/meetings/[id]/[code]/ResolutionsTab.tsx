@@ -1,3 +1,4 @@
+// src/components/layout/voting/ResolutionsTab.tsx
 'use client'
 
 import { List, Button, Tag, Space, Spin, Empty, Typography, Modal, Grid, Alert } from 'antd'
@@ -15,7 +16,7 @@ interface ResolutionsTabProps {
   attendanceVerified: boolean
   verificationResponse: any
   onVoteClick: (resolution: any) => void
-  meetingData: any // ✅ THÊM prop meetingData
+  meetingData: any
 }
 
 export default function ResolutionsTab({
@@ -25,7 +26,7 @@ export default function ResolutionsTab({
   attendanceVerified,
   verificationResponse,
   onVoteClick,
-  meetingData // ✅ NHẬN meetingData từ page
+  meetingData
 }: ResolutionsTabProps) {
   const screens = useBreakpoint()
   const { 
@@ -74,13 +75,6 @@ export default function ResolutionsTab({
       return
     }
 
-    if (!attendanceVerified && !verificationResponse?.data?.isUsed) {
-      Modal.warning({
-        title: 'Chưa điểm danh',
-        content: 'Vui lòng điểm danh trước khi bỏ phiếu.',
-      })
-      return
-    }
 
     // ✅ KIỂM TRA THỜI GIAN BỎ PHIẾU
     if (!isVotingTime()) {
@@ -153,7 +147,7 @@ export default function ResolutionsTab({
                 <Button 
                   key="vote" 
                   type="primary"
-                  // ✅ DISABLE NẾU NGOÀI THỜI GIAN BỎ PHIẾU
+                  // ✅ DISABLE CHỈ KHI NGOÀI THỜI GIAN BỎ PHIẾU HOẶC RESOLUTION KHÔNG ACTIVE
                   disabled={!resolution.isActive || !isVotingTime()}
                   onClick={() => handleVoteClick(resolution)}
                   size={screens.xs ? "small" : "middle"}

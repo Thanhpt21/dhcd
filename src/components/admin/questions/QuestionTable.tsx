@@ -3,7 +3,7 @@
 
 import { Table, Tag, Space, Tooltip, Input, Button, Modal, message, Select, Card, Statistic, Row, Col } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined, ExportOutlined, LikeOutlined, StarOutlined, StarFilled } from '@ant-design/icons'
+import { EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined, ExportOutlined, LikeOutlined, StarOutlined, StarFilled, ReloadOutlined } from '@ant-design/icons'
 import { useState } from 'react'
 import { useQuestions } from '@/hooks/question/useQuestions'
 import { useUpvoteQuestion } from '@/hooks/question/useUpvoteQuestion'
@@ -13,12 +13,13 @@ import { useAllMeetings } from '@/hooks/meeting/useAllMeetings'
 import type { Question, QuestionStatus, QuestionType } from '@/types/question.type'
 import { QuestionUpdateModal } from './QuestionUpdateModal'
 import { QuestionDetailModal } from './QuestionDetailModal'
-import dayjs from 'dayjs'
 import { useDeleteQuestion } from '@/hooks/question/useDeleteQuestion'
+import { useQueryClient } from '@tanstack/react-query'
 
 const { Option } = Select
 
 export default function QuestionTable() {
+  const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [meetingIdFilter, setMeetingIdFilter] = useState('')
@@ -46,6 +47,15 @@ export default function QuestionTable() {
   const { mutateAsync: deleteQuestion } = useDeleteQuestion()
   const { mutateAsync: upvoteQuestion } = useUpvoteQuestion()
   const { mutateAsync: selectQuestion, isPending: isSelecting } = useSelectQuestion() // ✅ THÊM HOOK
+
+
+  const handleRefresh = () => {
+    refetch?.()
+    queryClient.invalidateQueries({ queryKey: ['questions'] })
+    queryClient.invalidateQueries({ queryKey: ['questionStatistics'] })
+    message.success('Đã làm mới dữ liệu')
+  }
+
 
   const getTypeColor = (type: QuestionType) => {
     const colors: Record<string, string> = {
@@ -433,6 +443,13 @@ export default function QuestionTable() {
           <Button onClick={handleReset}>
             Đặt lại
           </Button>
+           <Button 
+              icon={<ReloadOutlined />} 
+              onClick={handleRefresh}
+              loading={isLoading}
+            >
+              Làm mới
+            </Button>
         </div>
       </div>
 

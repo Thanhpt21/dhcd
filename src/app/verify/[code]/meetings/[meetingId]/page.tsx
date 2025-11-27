@@ -18,8 +18,8 @@ export default function VerifyWithMeetingPage() {
   const [verificationResult, setVerificationResult] = useState<any>(null)
   const [isVerifying, setIsVerifying] = useState(false)
   const [hasAutoVerified, setHasAutoVerified] = useState(false)
-  const [shouldRedirect, setShouldRedirect] = useState(false)
   const [useFallback, setUseFallback] = useState(false)
+  const [hasRedirected, setHasRedirected] = useState(false) // 🔥 THÊM: Theo dõi đã redirect chưa
   
   // Thử dùng hook thông thường trước như fallback
   const { 
@@ -68,14 +68,22 @@ export default function VerifyWithMeetingPage() {
     }
   }, [verificationLink, isLinkForThisMeeting, verificationResult, hasAutoVerified])
 
+  // 🔥 SỬA: Tự động redirect ngay khi verify thành công
   useEffect(() => {
-    // Redirect sau khi verify thành công
-    if (shouldRedirect && meetingId) {
+    if (verificationResult && isVerificationSuccessful(verificationResult) && !hasRedirected) {
+      console.log('🎉 Verification successful, auto-redirecting...')
+      setHasRedirected(true)
+      
+      // Redirect ngay lập tức
       const redirectUrl = `/meetings/${meetingId}/${verificationCode}`
-      console.log('🔄 Redirecting to:', redirectUrl)
-      router.push(redirectUrl)
+      console.log('🔄 Auto-redirecting to:', redirectUrl)
+      
+      // Redirect sau 1 giây để user kịp thấy thông báo thành công
+      setTimeout(() => {
+        router.push(redirectUrl)
+      }, 1000)
     }
-  }, [shouldRedirect, meetingId, verificationCode, router])
+  }, [verificationResult, hasRedirected, meetingId, verificationCode, router])
 
   const handleVerify = async () => {
     if (!verificationLink) return
@@ -96,11 +104,6 @@ export default function VerifyWithMeetingPage() {
       
       console.log('✅ Verification with meeting success:', result)
       setVerificationResult(result)
-      
-      // Set flag để redirect sau 2 giây
-      setTimeout(() => {
-        setShouldRedirect(true)
-      }, 2000)
       
     } catch (error: any) {
       console.error('❌ Verification with meeting failed:', error)
@@ -125,9 +128,6 @@ export default function VerifyWithMeetingPage() {
           if (normalVerifyResponse.ok) {
             const normalResult = await normalVerifyResponse.json()
             setVerificationResult(normalResult)
-            setTimeout(() => {
-              setShouldRedirect(true)
-            }, 2000)
             return
           }
         } catch (normalError) {
@@ -262,11 +262,11 @@ export default function VerifyWithMeetingPage() {
 
   const statusInfo = getStatusInfo(verificationLink)
 
-  // HIỂN THỊ KẾT QUẢ XÁC THỰC THÀNH CÔNG VÀ CHUẨN BỊ REDIRECT
+  // 🔥 SỬA: HIỂN THỊ KẾT QUẢ XÁC THỰC THÀNH CÔNG VÀ TỰ ĐỘNG REDIRECT
   if (verificationResult && isVerificationSuccessful(verificationResult)) {
     const resultData = verificationResult.data
     
-    console.log('🎉 Verification successful, preparing redirect...')
+    console.log('🎉 Verification successful, auto-redirecting...')
 
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
@@ -278,24 +278,11 @@ export default function VerifyWithMeetingPage() {
               <div>
                 <p>{verificationResult.message || "Bạn đã điểm danh thành công"}</p>
                 <p className="mt-2 text-blue-600 font-medium">
-                  <LoadingOutlined spin /> Đang chuyển hướng đến trang cuộc họp...
+                  <LoadingOutlined spin /> Đang tự động chuyển hướng đến cuộc họp...
                 </p>
               </div>
             }
-            extra={[
-              <Button 
-                type="primary" 
-                key="meeting"
-                icon={<ArrowRightOutlined />}
-                onClick={() => router.push(`/meetings/${meetingId}/${verificationCode}`)}
-                loading={shouldRedirect}
-              >
-                Vào cuộc họp ngay
-              </Button>,
-              <Button key="home" href="/">
-                Về trang chủ
-              </Button>,
-            ]}
+            // 🔥 XÓA nút "Vào cuộc họp ngay" vì đã tự động redirect
           />
 
           <Descriptions title="Thông tin điểm danh" bordered column={1} className="mt-6">
@@ -352,44 +339,31 @@ export default function VerifyWithMeetingPage() {
     )
   }
 
-  // Link đã được sử dụng trước đó
-  if (verificationLink.isUsed) {
+  // Link đã được sử dụng trước đó - TỰ ĐỘNG REDIRECT LUÔN
+  if (verificationLink.isUsed && !hasRedirected) {
+    console.log('🔁 Link đã sử dụng, auto-redirecting...')
+    setHasRedirected(true)
+    
+    // Redirect ngay lập tức
+    setTimeout(() => {
+      router.push(`/meetings/${meetingId}/${verificationCode}`)
+    }, 1000)
+
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
           <Result
             status="success"
             title="Đã điểm danh thành công"
-            subTitle="Bạn đã điểm danh cho cuộc họp này trước đó"
-            extra={[
-              <Button 
-                type="primary" 
-                key="meeting"
-                icon={<ArrowRightOutlined />}
-                onClick={() => router.push(`/meetings/${meetingId}/${verificationCode}`)}
-              >
-                Vào cuộc họp
-              </Button>,
-              <Button key="home" href="/">
-                Về trang chủ
-              </Button>,
-            ]}
+            subTitle={
+              <div>
+                <p>Bạn đã điểm danh cho cuộc họp này trước đó</p>
+                <p className="mt-2 text-blue-600 font-medium">
+                  <LoadingOutlined spin /> Đang tự động chuyển hướng đến cuộc họp...
+                </p>
+              </div>
+            }
           />
-          
-          <Descriptions title="Thông tin điểm danh" bordered column={1} className="mt-6">
-            <Descriptions.Item label="Mã xác thực">
-              <strong>{verificationLink.verificationCode}</strong>
-            </Descriptions.Item>
-            <Descriptions.Item label="Cổ đông">
-              {verificationLink.shareholder?.fullName}
-            </Descriptions.Item>
-            <Descriptions.Item label="Cuộc họp">
-              {verificationLink.meeting?.meetingName}
-            </Descriptions.Item>
-            <Descriptions.Item label="Thời gian điểm danh">
-              {verificationLink.usedAt ? dayjs(verificationLink.usedAt).format('DD/MM/YYYY HH:mm') : '—'}
-            </Descriptions.Item>
-          </Descriptions>
         </Card>
       </div>
     )
@@ -402,13 +376,9 @@ export default function VerifyWithMeetingPage() {
         <Card className="w-full max-w-2xl">
           <Result
             status="warning"
-            title="Link đã hết hạn"
-            subTitle="Link điểm danh này đã hết thời gian sử dụng"
-            extra={[
-              <Button type="primary" key="home" href="/">
-                Về trang chủ
-              </Button>,
-            ]}
+            title="Link đã sử dụng"
+            subTitle="Link điểm danh này đã sử dụng"
+          
           />
           
           <Descriptions title="Thông tin link" bordered column={1} className="mt-6">
@@ -453,7 +423,7 @@ export default function VerifyWithMeetingPage() {
 
         <Alert
           message="Thông báo quan trọng"
-          description="Việc điểm danh này sẽ ghi nhận sự tham dự của bạn vào cuộc họp. Sau khi điểm danh thành công, bạn sẽ được chuyển đến trang cuộc họp."
+          description="Sau khi điểm danh thành công, bạn sẽ được tự động chuyển đến trang cuộc họp."
           type="info"
           showIcon
           className="mb-6"
