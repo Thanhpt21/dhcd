@@ -18,6 +18,8 @@ export function VerificationLinkDetailModal({ open, onClose, verification }: Pro
   const { mutateAsync: generateQRCode } = useGenerateQRCode()
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
 
+  console.log("verification", verification)
+
   const handleGenerateQRCode = async () => {
     if (!verification) return
     
