@@ -3,13 +3,14 @@
 
 import { Table, Tag, Space, Tooltip, Input, Button, Modal, message, Select, Switch, Upload } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined, UploadOutlined, DownloadOutlined, HistoryOutlined } from '@ant-design/icons'
+import { EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined, UploadOutlined, DownloadOutlined, HistoryOutlined, FileExcelOutlined } from '@ant-design/icons'
 import { useState } from 'react'
 import { useShareholders } from '@/hooks/shareholder/useShareholders'
 import { useDeleteShareholder } from '@/hooks/shareholder/useDeleteShareholder'
 import { useUpdateShareholderStatus } from '@/hooks/shareholder/useUpdateShareholderStatus'
 import { useImportShareholders } from '@/hooks/shareholder/useImportShareholders'
 import { useExportShareholders } from '@/hooks/shareholder/useExportShareholders'
+import { useExportTemplate } from '@/hooks/shareholder/useExportTemplate' // Import hook mới
 import type { Shareholder, Gender, ShareType } from '@/types/shareholder.type'
 import { ShareholderCreateModal } from './ShareholderCreateModal'
 import { ShareholderUpdateModal } from './ShareholderUpdateModal'
@@ -40,6 +41,7 @@ export default function ShareholderTable() {
   const { mutateAsync: updateStatus } = useUpdateShareholderStatus()
   const { mutateAsync: importShareholders, isPending: isImporting } = useImportShareholders()
   const { mutateAsync: exportShareholders, isPending: isExporting } = useExportShareholders()
+  const { mutateAsync: exportTemplate, isPending: isExportingTemplate } = useExportTemplate() // Hook mới
 
   const getGenderColor = (gender?: Gender | string) => {
     const colors: Record<string, string> = {
@@ -98,20 +100,39 @@ export default function ShareholderTable() {
 
   const handleExport = async () => {
     try {
-      const result = await exportShareholders()
+      const blob = await exportShareholders()
       
       // Create download link
-      const url = window.URL.createObjectURL(new Blob([result]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'danh-sach-co-dong.xlsx');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `danh-sach-co-dong_${new Date().toISOString().split('T')[0]}.xlsx`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
       
-      message.success('Xuất dữ liệu cổ đông thành công')
+      message.success('Xuất danh sách cổ đông thành công')
     } catch (error: any) {
       message.error(error?.response?.data?.message || 'Xuất dữ liệu thất bại')
+    }
+  }
+
+  const handleExportTemplate = async () => {
+    try {
+      const blob = await exportTemplate()
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'mau-import-co-dong.xlsx')
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      
+      message.success('Tải template Excel mẫu thành công')
+    } catch (error: any) {
+      message.error(error?.response?.data?.message || 'Tải template thất bại')
     }
   }
 
@@ -288,6 +309,15 @@ export default function ShareholderTable() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Nút Excel mẫu - đặt trước nút Nhập Excel */}
+          <Button 
+            icon={<FileExcelOutlined />} 
+            onClick={handleExportTemplate}
+            loading={isExportingTemplate}
+          >
+            Excel mẫu
+          </Button>
+          
           <Upload
             accept=".xlsx,.xls,.csv"
             showUploadList={false}

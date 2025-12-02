@@ -80,7 +80,6 @@ export const MeetingUpdateModal = ({
             name="meetingCode"
             rules={[
               { required: true, message: 'Vui lòng nhập mã cuộc họp' },
-              { pattern: /^[A-Z0-9_-]+$/, message: 'Mã chỉ được chứa chữ hoa, số, - và _' },
             ]}
           >
             <Input placeholder="VD: MTG-2024-001" />

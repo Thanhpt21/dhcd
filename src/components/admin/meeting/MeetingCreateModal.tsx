@@ -32,7 +32,7 @@ export const MeetingCreateModal = ({
         registrationEnd: values.registrationEnd?.toISOString(),
         votingStart: values.votingStart?.toISOString(),
         votingEnd: values.votingEnd?.toISOString(),
-        createdBy: 1, // TODO: Get from auth context
+        createdBy: 1,
       }
       await mutateAsync(payload)
       message.success('Tạo cuộc họp thành công')
@@ -66,7 +66,6 @@ export const MeetingCreateModal = ({
             name="meetingCode"
             rules={[
               { required: true, message: 'Vui lòng nhập mã cuộc họp' },
-              { pattern: /^[A-Z0-9_-]+$/, message: 'Mã chỉ được chứa chữ hoa, số, - và _' },
             ]}
           >
             <Input placeholder="VD: MTG-2024-001" />
