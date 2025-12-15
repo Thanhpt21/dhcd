@@ -74,9 +74,7 @@ export default function RegistrationTable() {
   const getTypeText = (type: RegistrationType | string) => {
     const texts: Record<string, string> = {
       IN_PERSON: 'Trực tiếp',
-      ONLINE: 'Trực tuyến',
       PROXY: 'Ủy quyền',
-      ABSENT: 'Vắng mặt'
     }
     return texts[type] || type
   }
@@ -114,7 +112,7 @@ export default function RegistrationTable() {
       render: (_text, _record, index) => (page - 1) * 10 + index + 1,
     },
     {
-      title: 'Mã đăng ký',
+      title: 'Mã đại biểu',
       dataIndex: 'registrationCode',
       key: 'registrationCode',
       render: (code: string) => <strong>{code}</strong>,

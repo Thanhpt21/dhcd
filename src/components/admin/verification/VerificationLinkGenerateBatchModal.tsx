@@ -245,7 +245,6 @@ export function VerificationLinkGenerateBatchModal({ open, onClose, refetch }: P
           const typeConfig = {
             'IN_PERSON': { color: 'blue', text: 'Trực tiếp' },
             'PROXY': { color: 'purple', text: 'Ủy quyền' },
-            'ONLINE': { color: 'green', text: 'Trực tuyến' },
           }
           const config = typeConfig[type as keyof typeof typeConfig] || { color: 'default', text: type }
           return <Tag color={config.color}>{config.text}</Tag>

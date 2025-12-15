@@ -1,11 +1,12 @@
 // src/components/admin/attendance/AttendanceCreateModal.tsx
 'use client'
 
-import { Modal, Form, Input, message, Button, Select, DatePicker, Alert } from 'antd'
+import { Modal, Form, Input, message, Button, Select, DatePicker, Alert, Empty, Tag } from 'antd'
 import { useEffect } from 'react'
 import { useCreateAttendance } from '@/hooks/attendance/useCreateAttendance'
-import { useAllShareholders } from '@/hooks/shareholder/useAllShareholders'
 import { useAllMeetings } from '@/hooks/meeting/useAllMeetings'
+// 1. Nhập hook lấy đăng ký
+import { useMeetingRegistrations } from '@/hooks/registration/useMeetingRegistrations'
 import type { CheckinMethod } from '@/types/attendance.type'
 import dayjs from 'dayjs'
 
@@ -25,8 +26,17 @@ export const AttendanceCreateModal = ({
 }: AttendanceCreateModalProps) => {
   const [form] = Form.useForm()
   const { mutateAsync, isPending } = useCreateAttendance()
-  const { data: shareholders } = useAllShareholders()
   const { data: meetings, isLoading: isLoadingMeetings } = useAllMeetings()
+
+  // 2. Lấy giá trị meetingId từ form để làm phụ thuộc
+  const selectedMeetingId = Form.useWatch('meetingId', form)
+  
+  // 3. Sử dụng hook lấy danh sách đăng ký với meetingId đã chọn
+  const { 
+    data: registrations, 
+    isLoading: isLoadingRegistrations,
+    error: registrationError
+  } = useMeetingRegistrations(selectedMeetingId ? selectedMeetingId : '')
 
   const onFinish = async (values: any) => {
     try {
@@ -57,6 +67,19 @@ export const AttendanceCreateModal = ({
     }
   }, [open, form])
 
+  // 4. Lọc chỉ lấy các đăng ký có trạng thái APPROVED
+  const approvedRegistrations = registrations?.filter(
+    (registration: any) => registration.status === 'APPROVED'
+  ) || []
+
+  // 5. Xử lý lỗi khi lấy danh sách đăng ký
+  useEffect(() => {
+    if (registrationError) {
+      console.error('Lỗi khi lấy danh sách đăng ký:', registrationError)
+      // message.error('Không thể tải danh sách cổ đông đã đăng ký')
+    }
+  }, [registrationError])
+
   return (
     <Modal
       title="Thêm điểm danh mới"
@@ -75,6 +98,10 @@ export const AttendanceCreateModal = ({
           <Select 
             placeholder="Chọn cuộc họp"
             loading={isLoadingMeetings}
+            onChange={() => {
+              // 6. Reset lựa chọn cổ đông khi đổi cuộc họp
+              form.setFieldValue('shareholderId', undefined)
+            }}
           >
             {meetings?.map((meeting: any) => (
               <Option key={meeting.id} value={meeting.id}>
@@ -87,26 +114,72 @@ export const AttendanceCreateModal = ({
         <Form.Item
           label="Cổ đông"
           name="shareholderId"
-          rules={[{ required: true, message: 'Vui lòng chọn cổ đông' }]}
+          rules={[{ 
+            required: true, 
+            message: 'Vui lòng chọn cổ đông đã đăng ký' 
+          }]}
+          help={selectedMeetingId && approvedRegistrations.length === 0 ? 
+            "Không có cổ đông nào đã đăng ký với trạng thái ĐÃ DUYỆT cho cuộc họp này" : 
+            undefined
+          }
         >
           <Select 
-            placeholder="Chọn cổ đông"
+            placeholder={
+              selectedMeetingId ? 
+                "Chọn cổ đông đã đăng ký (ĐÃ DUYỆT)" : 
+                "Vui lòng chọn cuộc họp trước"
+            }
+            loading={isLoadingRegistrations}
+            disabled={!selectedMeetingId || isLoadingRegistrations}
             showSearch
             filterOption={(input, option) => {
               const searchText = input.toLowerCase();
               const optionText = String(option?.label || option?.children || '');
               return optionText.toLowerCase().includes(searchText);
             }}
+            notFoundContent={
+              selectedMeetingId ? (
+                <Empty 
+                  image={Empty.PRESENTED_IMAGE_SIMPLE} 
+                  description={
+                    isLoadingRegistrations ? 
+                      "Đang tải danh sách..." : 
+                      "Không có cổ đông đã đăng ký"
+                  } 
+                />
+              ) : (
+                <Empty 
+                  image={Empty.PRESENTED_IMAGE_SIMPLE} 
+                  description="Vui lòng chọn cuộc họp trước" 
+                />
+              )
+            }
           >
-            {shareholders?.map((sh: any) => (
-              <Option 
-                key={sh.id} 
-                value={sh.id}
-                label={`${sh.shareholderCode} - ${sh.fullName}`}
-              >
-                {sh.shareholderCode} - {sh.fullName} ({sh.totalShares.toLocaleString()} CP)
-              </Option>
-            ))}
+            {/* 7. Chỉ hiển thị cổ đông từ danh sách đăng ký APPROVED */}
+            {approvedRegistrations?.map((registration: any) => {
+              const shareholder = registration.shareholder
+              return (
+                <Option 
+                  key={shareholder.id} 
+                  value={shareholder.id}
+                  label={`${shareholder.shareholderCode} - ${shareholder.fullName}`}
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="font-medium">
+                        {shareholder.shareholderCode} - {shareholder.fullName}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Đã đăng ký: {registration.sharesRegistered.toLocaleString()} CP
+                      </div>
+                    </div>
+                    <div className="text-xs">
+                      <Tag color="green">ĐÃ DUYỆT</Tag>
+                    </div>
+                  </div>
+                </Option>
+              )
+            })}
           </Select>
         </Form.Item>
 
@@ -138,20 +211,6 @@ export const AttendanceCreateModal = ({
         </div>
 
         <Form.Item
-          label="Địa chỉ IP"
-          name="ipAddress"
-        >
-          <Input placeholder="Nhập địa chỉ IP (tự động nếu để trống)" />
-        </Form.Item>
-
-        <Form.Item
-          label="Thiết bị"
-          name="userAgent"
-        >
-          <Input placeholder="Nhập thông tin thiết bị (tự động nếu để trống)" />
-        </Form.Item>
-
-        <Form.Item
           label="Ghi chú"
           name="notes"
         >
@@ -163,7 +222,11 @@ export const AttendanceCreateModal = ({
 
         <Alert
           message="Thông tin điểm danh"
-          description="Điểm danh sẽ được tạo với thời gian hiện tại nếu không chọn thời gian cụ thể."
+          description={
+            selectedMeetingId ? 
+              `Chỉ hiển thị cổ đông đã đăng ký với trạng thái "ĐÃ DUYỆT" cho cuộc họp này` : 
+              "Điểm danh sẽ được tạo với thời gian hiện tại nếu không chọn thời gian cụ thể."
+          }
           type="info"
           showIcon
           className="mb-4"
@@ -176,8 +239,12 @@ export const AttendanceCreateModal = ({
             loading={isPending} 
             block 
             size="large"
+            disabled={approvedRegistrations.length === 0}
           >
-            Tạo điểm danh
+            {approvedRegistrations.length === 0 ? 
+              "Không có cổ đông đã đăng ký" : 
+              "Tạo điểm danh"
+            }
           </Button>
         </Form.Item>
       </Form>

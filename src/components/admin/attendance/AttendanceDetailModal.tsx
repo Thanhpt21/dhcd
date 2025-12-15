@@ -36,7 +36,6 @@ export const AttendanceDetailModal = ({
     const texts: Record<string, string> = {
       QR_CODE: 'Quét QR Code',
       MANUAL: 'Thủ công',
-      FACE_RECOGNITION: 'Nhận diện khuôn mặt'
     }
     return texts[method] || method
   }

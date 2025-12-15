@@ -8,9 +8,7 @@ export enum MeetingStatus {
 
 export enum MeetingType {
   AGM = 'AGM',
-  EGM = 'EGM', 
   BOARD = 'BOARD',
-  SHAREHOLDER = 'SHAREHOLDER'
 }
 
 export interface Meeting {
@@ -29,6 +27,7 @@ export interface Meeting {
   votingEnd?: string;
   totalShares: number;
   totalShareholders: number;
+  participantCount: number;
   createdBy: number;
   createdAt: string;
   updatedAt: string;

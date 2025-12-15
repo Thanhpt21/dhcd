@@ -111,7 +111,6 @@ export const AttendanceUpdateModal = ({
           <Select placeholder="Chọn phương thức">
             <Option value="QR_CODE">QR Code</Option>
             <Option value="MANUAL">Thủ công</Option>
-            <Option value="FACE_RECOGNITION">Nhận diện</Option>
           </Select>
         </Form.Item>
 

@@ -1,15 +1,26 @@
 // src/components/admin/registration/RegistrationCreateModal.tsx
 'use client'
 
-import { Modal, Form, Input, message, Button, Select, DatePicker, InputNumber, Alert, Descriptions, Card } from 'antd'
+import { Modal, Form, Input, message, Button, Select, DatePicker, InputNumber, Alert, Descriptions, Card, Space } from 'antd'
 import { useEffect, useState } from 'react'
 import { useCreateRegistration } from '@/hooks/registration/useCreateRegistration'
 import { useAllShareholders } from '@/hooks/shareholder/useAllShareholders'
 import { useProxiesByShareholder } from '@/hooks/proxy/useProxiesByShareholder'
-import type { RegistrationType, RegistrationStatus } from '@/types/registration.type'
+import { useAllMeetings } from '@/hooks/meeting/useAllMeetings'
+import type { RegistrationType } from '@/types/registration.type'
 import type { Proxy } from '@/types/proxy.type'
+import type { Meeting } from '@/types/meeting.type'
+import type { Shareholder } from '@/types/shareholder.type'
 import dayjs from 'dayjs'
-import { UserOutlined, IdcardOutlined, MailOutlined, CalendarOutlined } from '@ant-design/icons'
+import { 
+  UserOutlined, 
+  IdcardOutlined, 
+  MailOutlined, 
+  PhoneOutlined, 
+  BankOutlined,
+  CalendarOutlined,
+  ShareAltOutlined
+} from '@ant-design/icons'
 
 const { Option } = Select
 const { TextArea } = Input
@@ -28,17 +39,24 @@ export const RegistrationCreateModal = ({
   const [form] = Form.useForm()
   const { mutateAsync, isPending } = useCreateRegistration()
   const { data: shareholders } = useAllShareholders()
-  const [meetingOptions, setMeetingOptions] = useState<{ value: number; label: string }[]>([])
+  const { data: meetings, isLoading: isLoadingMeetings } = useAllMeetings()
   const [selectedShareholderId, setSelectedShareholderId] = useState<number | null>(null)
   const [selectedProxy, setSelectedProxy] = useState<Proxy | null>(null)
+  const [selectedShareholder, setSelectedShareholder] = useState<Shareholder | null>(null)
+  const [idNumberInput, setIdNumberInput] = useState<string>('')
 
-  // 🎯 THÊM: Sử dụng Form.useWatch để theo dõi giá trị registrationType
   const registrationType = Form.useWatch('registrationType', form)
 
-  // Sử dụng hook mới để lấy proxies theo shareholder
   const { data: proxies, isLoading: isLoadingProxies } = useProxiesByShareholder(
     selectedShareholderId || 0
   )
+
+  // Tự sinh mã đăng ký
+  const generateRegistrationCode = () => {
+    const timestamp = Date.now().toString().slice(-6)
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
+    return `REG-${dayjs().format('YYYYMMDD')}-${timestamp}${random}`
+  }
 
   const onFinish = async (values: any) => {
     try {
@@ -51,7 +69,6 @@ export const RegistrationCreateModal = ({
         sharesRegistered: values.sharesRegistered || 0,
         status: values.status || 'PENDING',
         registrationType: values.registrationType || 'IN_PERSON',
-        // Nếu là ủy quyền và có chọn proxy, sử dụng thông tin từ proxy
         ...(values.registrationType === 'PROXY' && selectedProxy && {
           proxyName: selectedProxy.proxyPerson?.fullName,
           proxyIdNumber: selectedProxy.proxyPerson?.idNumber,
@@ -69,6 +86,8 @@ export const RegistrationCreateModal = ({
       form.resetFields()
       setSelectedShareholderId(null)
       setSelectedProxy(null)
+      setSelectedShareholder(null)
+      setIdNumberInput('')
       refetch?.()
     } catch (error: any) {
       console.error("❌ Lỗi tạo đăng ký:", error)
@@ -77,20 +96,19 @@ export const RegistrationCreateModal = ({
   }
 
   useEffect(() => {
-    if (!open) {
+    if (open) {
+      // Tự sinh mã đăng ký khi mở modal
+      form.setFieldsValue({
+        registrationCode: generateRegistrationCode()
+      })
+    } else {
       form.resetFields()
       setSelectedShareholderId(null)
       setSelectedProxy(null)
+      setSelectedShareholder(null)
+      setIdNumberInput('')
     }
   }, [open, form])
-
-  // Mock meetings data
-  useEffect(() => {
-    setMeetingOptions([
-      { value: 1, label: 'ĐHCD thường niên 2024 - 15/03/2024' },
-      { value: 2, label: 'ĐHCD bất thường - 20/04/2024' },
-    ])
-  }, [])
 
   // Lọc chỉ lấy ủy quyền còn hiệu lực và đã được duyệt
   const availableProxies = proxies?.filter((proxy: Proxy) => 
@@ -135,17 +153,39 @@ export const RegistrationCreateModal = ({
     }
   }
 
-  // Khi shareholder thay đổi, reset proxy selection
-  const handleShareholderChange = (value: number) => {
-    setSelectedShareholderId(value)
-    setSelectedProxy(null)
-    form.setFieldsValue({
-      proxyName: undefined,
-      proxyIdNumber: undefined,
-      proxyRelationship: undefined,
-      proxyDocumentUrl: undefined
-    })
+  // Xử lý khi nhập CCCD
+  const handleIdNumberSearch = (value: string) => {
+    setIdNumberInput(value)
+    
+    if (value && shareholders) {
+      const shareholder = shareholders.find((sh: Shareholder) => 
+        sh.idNumber?.toLowerCase().includes(value.toLowerCase())
+      )
+      
+      if (shareholder) {
+        setSelectedShareholderId(shareholder.id)
+        setSelectedShareholder(shareholder)
+        form.setFieldsValue({
+          shareholderId: shareholder.id
+        })
+      } else {
+        setSelectedShareholderId(null)
+        setSelectedShareholder(null)
+        form.setFieldsValue({
+          shareholderId: null
+        })
+      }
+    } else {
+      setSelectedShareholderId(null)
+      setSelectedShareholder(null)
+    }
   }
+
+  // Format dữ liệu meetings để hiển thị trong Select
+  const meetingOptions = meetings?.map((meeting: Meeting) => ({
+    value: meeting.id,
+    label: `${meeting.meetingName} - ${dayjs(meeting.meetingDate).format('DD/MM/YYYY HH:mm')}`
+  })) || []
 
   return (
     <Modal
@@ -159,14 +199,22 @@ export const RegistrationCreateModal = ({
       <Form form={form} layout="vertical" onFinish={onFinish}>
         <div className="grid grid-cols-2 gap-4">
           <Form.Item
-            label="Mã đăng ký"
+            label="Mã đại biểu"
             name="registrationCode"
-            rules={[
-              { required: true, message: 'Vui lòng nhập mã đăng ký' },
-              { pattern: /^[A-Z0-9_-]+$/, message: 'Mã chỉ được chứa chữ hoa, số, - và _' },
-            ]}
           >
-            <Input placeholder="VD: REG-2024-001" />
+            <Input 
+              placeholder="Mã tự động sinh" 
+              disabled 
+              addonAfter={
+                <Button 
+                  type="link" 
+                  size="small" 
+                  onClick={() => form.setFieldsValue({ registrationCode: generateRegistrationCode() })}
+                >
+                  Tạo mới
+                </Button>
+              }
+            />
           </Form.Item>
 
           <Form.Item
@@ -174,8 +222,11 @@ export const RegistrationCreateModal = ({
             name="meetingId"
             rules={[{ required: true, message: 'Vui lòng chọn cuộc họp' }]}
           >
-            <Select placeholder="Chọn cuộc họp">
-              {meetingOptions.map(meeting => (
+            <Select 
+              placeholder={isLoadingMeetings ? "Đang tải danh sách cuộc họp..." : "Chọn cuộc họp"}
+              loading={isLoadingMeetings}
+            >
+              {meetingOptions.map((meeting: any) => (
                 <Option key={meeting.value} value={meeting.value}>
                   {meeting.label}
                 </Option>
@@ -185,43 +236,147 @@ export const RegistrationCreateModal = ({
         </div>
 
         <Form.Item
-          label="Cổ đông"
-          name="shareholderId"
-          rules={[{ required: true, message: 'Vui lòng chọn cổ đông' }]}
+          label="Tìm cổ đông theo CCCD"
         >
-          <Select 
-            placeholder="Chọn cổ đông"
-            showSearch
-            onChange={handleShareholderChange}
-            filterOption={(input, option) => {
-              const searchText = input.toLowerCase();
-              const optionText = String(option?.label || option?.children || '');
-              return optionText.toLowerCase().includes(searchText);
-            }}
-          >
-            {shareholders?.map((sh: any) => (
-              <Option 
-                key={sh.id} 
-                value={sh.id}
-                label={`${sh.shareholderCode} - ${sh.fullName}`}
-              >
-                {sh.shareholderCode} - {sh.fullName} ({sh.totalShares.toLocaleString()} CP)
-              </Option>
-            ))}
-          </Select>
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Input.Search
+              placeholder="Nhập số CCCD/CMND của cổ đông"
+              value={idNumberInput}
+              onChange={(e) => handleIdNumberSearch(e.target.value)}
+              allowClear
+              enterButton="Tìm"
+              size="large"
+            />
+            
+            {selectedShareholder ? (
+              <Alert
+                message="Đã tìm thấy cổ đông"
+                description={`${selectedShareholder.fullName} - ${selectedShareholder.shareholderCode}`}
+                type="success"
+                showIcon
+              />
+            ) : idNumberInput && !selectedShareholder ? (
+              <Alert
+                message="Không tìm thấy cổ đông"
+                description="Vui lòng kiểm tra lại số CCCD/CMND"
+                type="warning"
+                showIcon
+              />
+            ) : null}
+          </Space>
         </Form.Item>
+
+        {/* Ẩn trường shareholderId nhưng vẫn gửi đi */}
+        <Form.Item name="shareholderId" hidden>
+          <Input />
+        </Form.Item>
+
+        {/* Hiển thị thông tin cổ đông khi đã chọn */}
+        {selectedShareholder && (
+          <Card 
+            title={
+              <div className="flex items-center gap-2">
+                <UserOutlined />
+                <span>Thông tin cổ đông</span>
+              </div>
+            }
+            size="small"
+            className="mb-4 border-green-200 bg-green-50"
+          >
+            <Descriptions column={2} size="small">
+              <Descriptions.Item 
+                label={
+                  <div className="flex items-center gap-1">
+                    <UserOutlined />
+                    <span>Họ tên</span>
+                  </div>
+                }
+              >
+                <strong>{selectedShareholder.fullName}</strong>
+              </Descriptions.Item>
+              
+              <Descriptions.Item 
+                label={
+                  <div className="flex items-center gap-1">
+                    <IdcardOutlined />
+                    <span>Mã cổ đông</span>
+                  </div>
+                }
+              >
+                <strong>{selectedShareholder.shareholderCode}</strong>
+              </Descriptions.Item>
+              
+              <Descriptions.Item 
+                label={
+                  <div className="flex items-center gap-1">
+                    <IdcardOutlined />
+                    <span>Số CCCD/CMND</span>
+                  </div>
+                }
+              >
+                {selectedShareholder.idNumber}
+              </Descriptions.Item>
+              
+              <Descriptions.Item 
+                label={
+                  <div className="flex items-center gap-1">
+                    <MailOutlined />
+                    <span>Email</span>
+                  </div>
+                }
+              >
+                {selectedShareholder.email}
+              </Descriptions.Item>
+              
+              <Descriptions.Item 
+                label={
+                  <div className="flex items-center gap-1">
+                    <PhoneOutlined />
+                    <span>Số điện thoại</span>
+                  </div>
+                }
+              >
+                {selectedShareholder.phoneNumber}
+              </Descriptions.Item>
+              
+              <Descriptions.Item 
+                label={
+                  <div className="flex items-center gap-1">
+                    <BankOutlined />
+                    <span>Ngân hàng</span>
+                  </div>
+                }
+              >
+                {selectedShareholder.bankName} - {selectedShareholder.bankAccount}
+              </Descriptions.Item>
+              
+              <Descriptions.Item 
+                label={
+                  <div className="flex items-center gap-1">
+                    <ShareAltOutlined />
+                    <span>Tổng số cổ phần</span>
+                  </div>
+                }
+                span={2}
+              >
+                <strong className="text-green-600">{selectedShareholder.totalShares?.toLocaleString() || 0} cổ phần</strong>
+              </Descriptions.Item>
+              
+              
+            </Descriptions>
+          </Card>
+        )}
 
         <div className="grid grid-cols-3 gap-4">
           <Form.Item
             label="Hình thức tham dự"
             name="registrationType"
             initialValue="IN_PERSON"
+            rules={[{ required: true, message: 'Vui lòng chọn hình thức tham dự' }]}
           >
             <Select onChange={handleRegistrationTypeChange}>
               <Option value="IN_PERSON">Trực tiếp</Option>
-              <Option value="ONLINE">Trực tuyến</Option>
               <Option value="PROXY">Ủy quyền</Option>
-              <Option value="ABSENT">Vắng mặt</Option>
             </Select>
           </Form.Item>
 
@@ -229,6 +384,7 @@ export const RegistrationCreateModal = ({
             label="Trạng thái"
             name="status"
             initialValue="PENDING"
+            rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}
           >
             <Select>
               <Option value="PENDING">Chờ duyệt</Option>
@@ -246,6 +402,7 @@ export const RegistrationCreateModal = ({
           >
             <InputNumber 
               min={0}
+              max={selectedShareholder?.totalShares || 0}
               style={{ width: '100%' }}
               placeholder="Nhập số cổ phần"
               disabled={!!selectedProxy}
@@ -253,7 +410,6 @@ export const RegistrationCreateModal = ({
           </Form.Item>
         </div>
 
-        {/* 🎯 SỬA: Sử dụng registrationType từ Form.useWatch thay vì form.getFieldValue */}
         {registrationType === 'PROXY' && selectedShareholderId && (
           <>
             <Form.Item
@@ -275,7 +431,6 @@ export const RegistrationCreateModal = ({
               </Select>
             </Form.Item>
 
-            {/* Thông báo khi không có ủy quyền khả dụng */}
             {!isLoadingProxies && availableProxies.length === 0 && (
               <Alert
                 message="Không có ủy quyền nào khả dụng"
@@ -286,7 +441,6 @@ export const RegistrationCreateModal = ({
               />
             )}
 
-            {/* Hiển thị thông tin người được ủy quyền khi chọn proxy */}
             {selectedProxy && (
               <Card 
                 title={
@@ -372,8 +526,6 @@ export const RegistrationCreateModal = ({
                 )}
               </Card>
             )}
-
-           
           </>
         )}
 
@@ -381,6 +533,7 @@ export const RegistrationCreateModal = ({
           <Form.Item
             label="Ngày đăng ký"
             name="registrationDate"
+            initialValue={dayjs()}
           >
             <DatePicker 
               format="DD/MM/YYYY HH:mm"
@@ -404,17 +557,6 @@ export const RegistrationCreateModal = ({
         </div>
 
         <Form.Item
-          label="Phương thức điểm danh"
-          name="checkinMethod"
-        >
-          <Select placeholder="Chọn phương thức điểm danh">
-            <Option value="QR_CODE">Quét QR Code</Option>
-            <Option value="MANUAL">Thủ công</Option>
-            <Option value="FACE_RECOGNITION">Nhận diện khuôn mặt</Option>
-          </Select>
-        </Form.Item>
-
-        <Form.Item
           label="Ghi chú"
           name="notes"
         >
@@ -431,11 +573,16 @@ export const RegistrationCreateModal = ({
             loading={isPending} 
             block 
             size="large"
-            disabled={registrationType === 'PROXY' && !selectedProxy}
+            disabled={
+              !selectedShareholderId || 
+              (registrationType === 'PROXY' && !selectedProxy)
+            }
           >
-            {registrationType === 'PROXY' && !selectedProxy 
-              ? 'Vui lòng chọn ủy quyền' 
-              : 'Tạo đăng ký'
+            {!selectedShareholderId 
+              ? 'Vui lòng chọn cổ đông' 
+              : registrationType === 'PROXY' && !selectedProxy 
+                ? 'Vui lòng chọn ủy quyền' 
+                : 'Tạo đăng ký'
             }
           </Button>
         </Form.Item>

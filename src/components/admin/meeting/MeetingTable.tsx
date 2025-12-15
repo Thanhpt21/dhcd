@@ -1,9 +1,9 @@
 // src/components/admin/meeting/MeetingTable.tsx
 'use client'
 
-import { Table, Tag, Space, Tooltip, Input, Button, Modal, message, Select, Badge } from 'antd'
+import { Table, Tag, Space, Tooltip, Input, Button, Modal, message, Select, Badge, Dropdown, MenuProps } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { EditOutlined, DeleteOutlined, EyeOutlined, BarChartOutlined, SyncOutlined, CheckCircleOutlined, ClockCircleOutlined, PlayCircleOutlined, PauseCircleOutlined, FileTextOutlined, AuditOutlined, CalendarOutlined } from '@ant-design/icons'
+import { EditOutlined, DeleteOutlined, EyeOutlined, BarChartOutlined, SyncOutlined, CheckCircleOutlined, ClockCircleOutlined, PlayCircleOutlined, PauseCircleOutlined, FileTextOutlined, AuditOutlined, CalendarOutlined, MoreOutlined, BookOutlined, ScheduleOutlined, FolderOutlined } from '@ant-design/icons'
 import { useState, useEffect } from 'react'
 import { useMeetings } from '@/hooks/meeting/useMeetings'
 import { useDeleteMeeting } from '@/hooks/meeting/useDeleteMeeting'
@@ -270,90 +270,140 @@ export default function MeetingTable() {
         </div>
       ),
     },
-    {
-      title: 'Hành động',
-      key: 'action',
-      width: 180,
-      render: (_, record) => (
-        <Space size="middle">
-            <Tooltip title="Tài liệu">
-              <FileTextOutlined
-                style={{ color: '#1890ff', cursor: 'pointer' }}
-                onClick={() => router.push(`/admin/meetings/${record.id}/documents`)}
-              />
-            </Tooltip>
-            <Tooltip title="Chương trình nghị sự">
-              <ClockCircleOutlined
-                style={{ color: '#722ed1', cursor: 'pointer' }}
-                onClick={() => router.push(`/admin/meetings/${record.id}/agendas`)}
-              />
-            </Tooltip>
-           
-           <Tooltip title="Nghị quyết">
-            <FileTextOutlined
-              style={{ color: '#722ed1', cursor: 'pointer' }}
-              onClick={() => router.push(`/admin/meetings/${record.id}/resolutions`)}
-            />
-          </Tooltip>
-          <Tooltip title="Xem chi tiết">
-            <EyeOutlined
-                style={{ color: '#1890ff', cursor: 'pointer' }}
-                onClick={() => {
-                    setSelectedMeetingId(record.id)
-                    setOpenDetail(true)
-                }}
-            />
-          </Tooltip>
-          <Tooltip title="Thống kê">
-            <BarChartOutlined
-              style={{ color: '#52c41a', cursor: 'pointer' }}
-              onClick={() => {
-                setSelectedMeeting(record)
-                setOpenStatistics(true)
-              }}
-            />
-          </Tooltip>
-           <Tooltip title="Phiếu bầu">
-              <AuditOutlined
-                style={{ color: '#13c2c2', cursor: 'pointer' }}
-                onClick={() => router.push(`/admin/meetings/${record.id}/votes`)}
-              />
-            </Tooltip>
-          <Tooltip title="Chỉnh sửa">
-            <EditOutlined
-              style={{ color: '#faad14', cursor: 'pointer' }}
-              onClick={() => {
-                setSelectedMeeting(record)
-                setOpenUpdate(true)
-              }}
-            />
-          </Tooltip>
-          <Tooltip title="Xóa">
-            <DeleteOutlined
-              style={{ color: 'red', cursor: 'pointer' }}
-              onClick={() => {
-                Modal.confirm({
-                  title: 'Xác nhận xóa cuộc họp',
-                  content: `Bạn có chắc chắn muốn xóa cuộc họp "${record.meetingName}" không?`,
-                  okText: 'Xóa',
-                  okType: 'danger',
-                  cancelText: 'Hủy',
-                  onOk: async () => {
-                    try {
-                      await deleteMeeting(record.id)
-                      message.success('Xóa cuộc họp thành công')
-                      refetch?.()
-                    } catch (error: any) {
-                      message.error(error?.response?.data?.message || 'Xóa thất bại')
-                    }
-                  },
-                })
-              }}
-            />
-          </Tooltip>
-        </Space>
-      ),
-    },
+   {
+  title: 'Hành động',
+  key: 'action',
+  width: 100,
+  fixed: 'right',
+  render: (_, record) => {
+    const menuItems: MenuProps['items'] = [
+      {
+        key: 'detail',
+        label: 'Xem chi tiết',
+        icon: <EyeOutlined />,
+        onClick: () => {
+          setSelectedMeetingId(record.id)
+          setOpenDetail(true)
+        },
+      },
+      {
+        key: 'statistics',
+        label: 'Thống kê',
+        icon: <BarChartOutlined />,
+        onClick: () => {
+          setSelectedMeeting(record)
+          setOpenStatistics(true)
+        },
+      },
+      {
+        key: 'edit',
+        label: 'Chỉnh sửa',
+        icon: <EditOutlined />,
+        onClick: () => {
+          setSelectedMeeting(record)
+          setOpenUpdate(true)
+        },
+      },
+      {
+        type: 'divider',
+      },
+      {
+        key: 'documents',
+        label: 'Tài liệu',
+        icon: <FolderOutlined />,
+        onClick: () => router.push(`/admin/meetings/${record.id}/documents`),
+      },
+      {
+        key: 'agendas',
+        label: 'Chương trình nghị sự',
+        icon: <ScheduleOutlined />,
+        onClick: () => router.push(`/admin/meetings/${record.id}/agendas`),
+      },
+      {
+        key: 'resolutions',
+        label: 'Nghị quyết',
+        icon: <BookOutlined />,
+        onClick: () => router.push(`/admin/meetings/${record.id}/resolutions`),
+      },
+      {
+        key: 'votes',
+        label: 'Phiếu bầu',
+        icon: <AuditOutlined />,
+        onClick: () => router.push(`/admin/meetings/${record.id}/votes`),
+      },
+      {
+        type: 'divider',
+      },
+      {
+        key: 'delete',
+        label: 'Xóa',
+        icon: <DeleteOutlined />,
+        danger: true,
+        onClick: () => {
+          Modal.confirm({
+            title: 'Xác nhận xóa cuộc họp',
+            content: `Bạn có chắc chắn muốn xóa cuộc họp "${record.meetingName}" không?`,
+            okText: 'Xóa',
+            okType: 'danger',
+            cancelText: 'Hủy',
+            onOk: async () => {
+              try {
+                await deleteMeeting(record.id)
+                message.success('Xóa cuộc họp thành công')
+                refetch?.()
+              } catch (error: any) {
+                message.error(error?.response?.data?.message || 'Xóa thất bại')
+              }
+            },
+          })
+        },
+      },
+    ]
+
+    const menuProps: MenuProps = {
+      items: menuItems,
+    }
+
+    return (
+      <Space size="small">
+        {/* Chỉ hiển thị 2 icon quan trọng nhất */}
+        <Tooltip title="Xem chi tiết">
+          <Button
+            type="text"
+            size="small"
+            icon={<EyeOutlined style={{ color: '#1890ff' }} />}
+            onClick={() => {
+              setSelectedMeetingId(record.id)
+              setOpenDetail(true)
+            }}
+          />
+        </Tooltip>
+        
+        <Tooltip title="Chỉnh sửa">
+          <Button
+            type="text"
+            size="small"
+            icon={<EditOutlined style={{ color: '#faad14' }} />}
+            onClick={() => {
+              setSelectedMeeting(record)
+              setOpenUpdate(true)
+            }}
+          />
+        </Tooltip>
+
+        {/* Dropdown cho các hành động còn lại */}
+        <Dropdown menu={menuProps} trigger={['click']} placement="bottomRight">
+          <Button
+            type="text"
+            size="small"
+            icon={<MoreOutlined />}
+            style={{ color: '#666' }}
+          />
+        </Dropdown>
+      </Space>
+    )
+  },
+},
   ]
 
   const handleSearch = () => {

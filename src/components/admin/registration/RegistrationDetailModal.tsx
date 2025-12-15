@@ -46,9 +46,7 @@ export const RegistrationDetailModal = ({
   const getTypeText = (type: string) => {
     const texts: Record<string, string> = {
       IN_PERSON: 'Trực tiếp',
-      ONLINE: 'Trực tuyến',
       PROXY: 'Ủy quyền',
-      ABSENT: 'Vắng mặt'
     }
     return texts[type] || type
   }
@@ -57,7 +55,6 @@ export const RegistrationDetailModal = ({
     const texts: Record<string, string> = {
       QR_CODE: 'Quét QR Code',
       MANUAL: 'Thủ công',
-      FACE_RECOGNITION: 'Nhận diện khuôn mặt'
     }
     return texts[method] || method
   }

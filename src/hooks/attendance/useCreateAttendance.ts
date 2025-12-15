@@ -13,7 +13,6 @@ export const useCreateAttendance = () => {
       return res.data.data
     },
     onSuccess: () => {
-      message.success('Tạo điểm danh thành công')
       queryClient.invalidateQueries({ queryKey: ['attendances'] })
     },
     onError: (error: any) => {
