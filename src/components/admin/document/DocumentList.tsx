@@ -166,16 +166,7 @@ export default function DocumentList({
         </Tag>
       ),
     },
-    {
-      title: 'Loại file',
-      dataIndex: 'fileType',
-      key: 'fileType',
-      render: (fileType: string) => (
-        <Tag>
-          {fileType.split('/')[1]?.toUpperCase() || fileType}
-        </Tag>
-      ),
-    },
+   
     {
       title: 'Kích thước',
       dataIndex: 'fileSize',
